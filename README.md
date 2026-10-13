@@ -390,8 +390,8 @@ soma-lang/
 
 ### Clone & Setup
 ```bash
-git clone https://github.com/VJ420/soma-lang.git
-cd soma-lang
+git clone https://github.com/VJ420/Soma.git
+cd Soma
 ```
 
 ### Run Hello Cells
@@ -461,7 +461,7 @@ python benchmarks/cross_domain_benchmark.py
 
 Soma is conceived, architected, and maintained by **Vighnesh Jha**.  
 GitHub: [github.com/VJ420](https://github.com/VJ420)  
-Repository: [github.com/VJ420/soma-lang](https://github.com/VJ420/soma-lang)
+Repository: [github.com/VJ420/Soma](https://github.com/VJ420/Soma)
 
 Released under the **MIT License**.  
 Copyright © 2026 Vighnesh Jha.
