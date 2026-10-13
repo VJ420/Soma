@@ -1,0 +1,36 @@
+# =========================================================
+# Fractal Advanced Features: Pattern Matching & Actor Concurrency
+# =========================================================
+
+print("=== 1. Pattern Matching with Guards ===")
+
+categorize_http(code):
+  match code:
+    200: "200 OK: Everything is fine"
+    404: "404 Not Found: Resource missing"
+    err when err >= 500:
+      "Server Explosion: Error {err} detected!"
+    _: "Unknown status: {code}"
+
+print(categorize_http(200))
+print(categorize_http(404))
+print(categorize_http(503))
+print(categorize_http(999))
+
+print("\n=== 2. Actor Concurrency with Fibers & Channels ===")
+
+# Create a channel for communication
+ch: channel()
+
+# Spawn background worker
+spawn:
+  print("[Worker] Running in background fiber...")
+  sleep(0.05)
+  print("[Worker] Sending secret payload to channel...")
+  "Fractal-Super-Payload-42" -> ch.send
+
+print("[Main] Waiting for message from worker...")
+received: ch.recv()
+print("[Main] Message received successfully: {received}")
+
+print("\n=== World-Class Language Verification Complete! ===")

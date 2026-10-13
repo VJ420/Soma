@@ -1,0 +1,46 @@
+# ==========================================
+# Welcome to Fractal (.fc)
+# The language that beats Python at simplicity
+# and runs with C++ raw performance!
+# ==========================================
+
+print("=== 1. The Power of Recursive Modularity ===")
+
+# A Math cell containing nested sub-cells:
+math:
+  pi: 3.14159
+  square(n): n * n
+  circle_area(r):
+    pi * square(r)
+
+print("Pi is:", math.pi)
+print("Square of 7:", math.square(7))
+print("Circle area of radius 10:", math.circle_area(10))
+
+print("\n=== 2. Pipelines: Data Flows Effortlessly ===")
+# Left to right flow without messy nested parentheses!
+12 -> math.square -> print
+
+print("\n=== 3. Objects / Classes Without Boilerplate ===")
+# In Python: class Person: def __init__(self, name, age): self.name = name ...
+# In Fractal: Just a Cell with inputs and internal methods!
+Hero(name, role, power_level):
+  describe():
+    print("Hero: " + name + " [" + role + "] | Power: " + str(power_level))
+  boost(amount):
+    power_level = power_level + amount
+    print(name + " powered up by " + str(amount) + "! New power: " + str(power_level))
+
+iron_man: Hero("Tony Stark", "Tech Avenger", 9000)
+iron_man.describe()
+iron_man.boost(1500)
+
+print("\n=== 4. Lists & Iteration ===")
+numbers: [1, 2, 3, 4, 5]
+sum = 0
+for n in numbers:
+  sum = sum + n
+
+print("Sum of numbers:", sum)
+
+print("\n=== Done! Fractal is fast, recursive, and halwa to write! ===")

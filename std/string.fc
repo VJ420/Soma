@@ -1,0 +1,19 @@
+# Fractal Standard String Module (std/string.fc)
+
+join(lst, sep):
+  if len(lst) == 0: ""
+  else:
+    res = str(lst[0])
+    i = 1
+    while i < len(lst):
+      res = res + sep + str(lst[i])
+      i = i + 1
+    res
+
+repeat_str(s, count):
+  res = ""
+  i = 0
+  while i < count:
+    res = res + s
+    i = i + 1
+  res

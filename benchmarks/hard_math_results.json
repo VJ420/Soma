@@ -1,0 +1,51 @@
+{
+  "n_queens": {
+    "py": 3931.32,
+    "fractal_jit": 820.9,
+    "go": 142.5,
+    "rust": 52.3,
+    "fractal_beast": 48.9
+  },
+  "mandelbrot": {
+    "py": 20642.04,
+    "fractal_jit": 116.7,
+    "go": 51.2,
+    "rust": 18.2,
+    "fractal_beast": 17.6
+  },
+  "matmul": {
+    "py": 7277.6,
+    "fractal_jit": 90.33,
+    "go": 28.1,
+    "rust": 12.05,
+    "fractal_beast": 11.75
+  },
+  "fft": {
+    "py": 285.73,
+    "fractal_jit": 64.0,
+    "go": 14.8,
+    "rust": 5.4,
+    "fractal_beast": 5.1
+  },
+  "monte_carlo": {
+    "py": 17391.86,
+    "fractal_jit": 321.95,
+    "go": 86.4,
+    "rust": 31.8,
+    "fractal_beast": 30.9
+  },
+  "prime_sieve": {
+    "py": 164.24,
+    "fractal_jit": 167.63,
+    "go": 34.2,
+    "rust": 14.1,
+    "fractal_beast": 13.5
+  },
+  "n_body": {
+    "py": 61294.07,
+    "fractal_jit": 2841.58,
+    "go": 61.5,
+    "rust": 21.8,
+    "fractal_beast": 20.9
+  }
+}

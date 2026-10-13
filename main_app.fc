@@ -1,0 +1,15 @@
+# Main application demonstrating multi-file Fractal architecture
+use "./math_lib.fc" as math
+
+print("Imported math_lib successfully!")
+print("Math Pi:", math.pi)
+
+# Cube test
+c: math.cube(4)
+print("Cube of 4:", c)
+
+# Fibonacci recursion test
+f10: math.fib(10)
+print("10th Fibonacci number is: {f10}")
+
+print("Multi-module recursive modularity is working beautifully!")

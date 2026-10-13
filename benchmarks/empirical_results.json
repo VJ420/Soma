@@ -1,0 +1,44 @@
+{
+  "fibonacci": {
+    "domain": "Recursive Combinatorics (fib 28)",
+    "complexity": "O(2^n) Call Stack",
+    "python_ms": 93.41,
+    "fractal_ms": 16.85,
+    "speedup": 5.543620178041542
+  },
+  "sieve": {
+    "domain": "Number Theory (Sieve n=100k)",
+    "complexity": "O(n log log n) Memory Access",
+    "python_ms": 40.23,
+    "fractal_ms": 13.53,
+    "speedup": 2.973392461197339
+  },
+  "fma": {
+    "domain": "Fused Multiply-Add (1M Ops)",
+    "complexity": "O(n) Floating-Point Math",
+    "python_ms": 335.0,
+    "fractal_ms": 38.5,
+    "speedup": 8.7012987012987
+  },
+  "oop": {
+    "domain": "Object Dispatch (50k Particles)",
+    "complexity": "O(n) Memory & Method Dispatch",
+    "python_ms": 59.8,
+    "fractal_ms": 6.13,
+    "speedup": 9.755301794453507
+  },
+  "qsort": {
+    "domain": "Quicksort Permutation (10k items)",
+    "complexity": "O(n log n) Recursive Partition",
+    "python_ms": 29.3,
+    "fractal_ms": 21.0,
+    "speedup": 1.3952380952380952
+  },
+  "swarm": {
+    "domain": "Parallel Swarm Core (5M items)",
+    "complexity": "O(n / p) Multi-Core Saturated",
+    "python_ms": 1416.94,
+    "fractal_ms": 32.6693,
+    "speedup": 43.37221795385882
+  }
+}

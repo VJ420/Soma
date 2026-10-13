@@ -1,0 +1,24 @@
+use "./std/math.fc" as math
+use "./std/array.fc" as arr
+
+print("Testing Standard Library Modules:")
+
+# Math tests
+print("Math Tau:", math.tau)
+print("Clamp 15 between 0 and 10:", math.clamp(15, 0, 10))
+print("Lerp between 10 and 20 at 0.5:", math.lerp(10, 20, 0.5))
+print("GCD of 54 and 24:", math.gcd(54, 24))
+print("Is 29 prime?", math.is_prime(29))
+print("Is 30 prime?", math.is_prime(30))
+
+# Array tests
+nums: [10, 45, 3, 99, 21]
+print("Sum of nums:", arr.sum(nums))
+print("Max of nums:", arr.max_of(nums))
+print("Min of nums:", arr.min_of(nums))
+print("Contains 99?", arr.contains(nums, 99))
+print("Contains 100?", arr.contains(nums, 100))
+
+# Indexing & mutation test
+nums[2] = 777
+print("Updated nums index 2:", nums[2])

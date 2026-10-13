@@ -1,0 +1,32 @@
+# Fractal Standard Array/List Utilities (std/array.fc)
+
+sum(lst):
+  total = 0
+  for item in lst:
+    total = total + item
+  total
+
+contains(lst, target):
+  found = false
+  for item in lst:
+    if item == target:
+      found = true
+  found
+
+max_of(lst):
+  if len(lst) == 0: none
+  else:
+    best = lst[0]
+    for item in lst:
+      if item > best:
+        best = item
+    best
+
+min_of(lst):
+  if len(lst) == 0: none
+  else:
+    best = lst[0]
+    for item in lst:
+      if item < best:
+        best = item
+    best
