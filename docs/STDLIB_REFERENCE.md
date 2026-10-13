@@ -1,6 +1,7 @@
-# Fractal Standard Library Reference
+# Soma Standard Library Reference
 
-**Tagline:** *Built in India for Elite Developers*  
+**Conceived and Crafted in India**  
+Created & Designed by **[Vighnesh Jha](https://github.com/VJ420)** ([@VJ420](https://github.com/VJ420))  
 **Core Modules:** `std/math.fc`, `std/array.fc`, `std/string.fc`
 
 ---

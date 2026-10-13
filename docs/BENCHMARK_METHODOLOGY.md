@@ -1,6 +1,7 @@
-# Fractal Multi-Language Benchmark Suite & Validation Methodology
+# Soma Multi-Language Benchmark Suite & Validation Methodology
 
-**Tagline:** *Built in India for Elite Developers*  
+**Conceived and Crafted in India**  
+Created & Designed by **[Vighnesh Jha](https://github.com/VJ420)** ([@VJ420](https://github.com/VJ420))  
 **Empirical Target:** Verifiable comparisons against Python 3.12, Go 1.22, and Rust Native Opt 3.
 
 ---

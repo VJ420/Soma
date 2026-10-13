@@ -1,17 +1,20 @@
 """
-Fractal Recursive Agentic Architecture (FRAA).
-Automated decomposition of high-level goals into parallel, recursively-modular sub-agent cells.
+Soma V2 Recursive Agentic Architecture (SMAA-V2).
+Tier 3 Hierarchical Swarm Decomposition:
+Master Orchestrator -> Regional Worker Cells -> Micro-Assistant Cells.
 """
 import time
 import json
 import uuid
+import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Callable
 
-@dataclass
+@dataclass(slots=True)
 class CellTask:
     id: str
+    tier: str  # "MASTER", "WORKER", "ASSISTANT"
     name: str
     goal: str
     inputs: Dict[str, Any] = field(default_factory=dict)
@@ -23,63 +26,68 @@ class CellTask:
 class TaskDecomposer:
     """
     Intelligently breaks down macro-level program intentions into
-    micro-level recursively modular execution blocks.
+    3-Tier Hierarchical Execution Blocks:
+    Master -> 4 Regional Workers -> 4 Micro-Assistants each (16 leaves).
     """
     @staticmethod
-    def decompose(macro_goal: str, payload: Any = None) -> CellTask:
-        root_id = f"cell_root_{uuid.uuid4().hex[:6]}"
-        root_task = CellTask(id=root_id, name="RootOrchestrator", goal=macro_goal, inputs={"payload": payload})
+    def decompose(macro_goal: str, payload: Any = None, workers_count: int = 4, assistants_per_worker: int = 4) -> CellTask:
+        root_id = f"cell_master_{uuid.uuid4().hex[:6]}"
+        root_task = CellTask(
+            id=root_id,
+            tier="MASTER",
+            name="MasterOrchestratorCell",
+            goal=macro_goal,
+            inputs={"payload": payload, "workers_count": workers_count, "assistants_per_worker": assistants_per_worker}
+        )
 
-        # Heuristic decomposition based on intention
-        # Realizes recursive modularity: macro task -> parallel cell chunks -> aggregation
-        if "compute" in macro_goal.lower() or "matrix" in macro_goal.lower() or "data" in macro_goal.lower():
-            # Data parallel chunking
-            items = payload if isinstance(payload, list) else list(range(1, 101))
-            chunk_size = max(1, len(items) // 4)
-            chunks = [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
-            
-            for idx, chunk in enumerate(chunks):
-                sub_id = f"cell_worker_{idx}_{uuid.uuid4().hex[:4]}"
-                root_task.subtasks.append(
-                    CellTask(
-                        id=sub_id,
-                        name=f"WorkerCell_{idx}",
-                        goal=f"Process chunk {idx} in parallel",
-                        inputs={"chunk": chunk, "operation": "transform_and_aggregate"}
-                    )
-                )
+        items = payload if isinstance(payload, list) else list(range(1, 1001))
+        total_items = len(items)
+        worker_chunk_size = max(1, math.ceil(total_items / workers_count))
 
-        elif "pipeline" in macro_goal.lower() or "build" in macro_goal.lower():
-            # Pipeline modular decomposition: Lex -> Parse -> Optimize -> CodeGen
-            stages = [
-                ("LexerCell", "Tokenize source input stream"),
-                ("ParserCell", "Build recursive Abstract Syntax Tree"),
-                ("OptimizerCell", "Apply dead-code elimination and inlining"),
-                ("CodeGenCell", "Emit high-performance target machine code")
-            ]
-            for idx, (name, goal) in enumerate(stages):
-                sub_id = f"cell_stage_{idx}_{uuid.uuid4().hex[:4]}"
-                root_task.subtasks.append(
-                    CellTask(id=sub_id, name=name, goal=goal, inputs={"stage_index": idx})
+        for w_idx in range(workers_count):
+            w_start = w_idx * worker_chunk_size
+            w_end = min(total_items, (w_idx + 1) * worker_chunk_size)
+            worker_items = items[w_start:w_end]
+
+            if not worker_items:
+                continue
+
+            worker_id = f"cell_worker_{w_idx}_{uuid.uuid4().hex[:4]}"
+            worker_task = CellTask(
+                id=worker_id,
+                tier="WORKER",
+                name=f"WorkerCell_{w_idx}",
+                goal=f"Supervise and subdivide partition {w_idx} [{w_start}:{w_end}]",
+                inputs={"partition_index": w_idx, "items_count": len(worker_items)}
+            )
+
+            # Worker subdivides partition into Micro-Assistant chunks
+            asst_chunk_size = max(1, math.ceil(len(worker_items) / assistants_per_worker))
+            for a_idx in range(assistants_per_worker):
+                a_start = a_idx * asst_chunk_size
+                a_end = min(len(worker_items), (a_idx + 1) * asst_chunk_size)
+                micro_chunk = worker_items[a_start:a_end]
+
+                if not micro_chunk:
+                    continue
+
+                asst_id = f"cell_asst_{w_idx}_{a_idx}_{uuid.uuid4().hex[:4]}"
+                asst_task = CellTask(
+                    id=asst_id,
+                    tier="ASSISTANT",
+                    name=f"Worker_{w_idx}_MicroAssistant_{a_idx}",
+                    goal=f"Execute vector operations on sub-slice [{w_start + a_start}:{w_start + a_end}]",
+                    inputs={"chunk": micro_chunk, "offset": w_start + a_start}
                 )
-        else:
-            # General divide-and-conquer
-            for idx in range(4):
-                sub_id = f"cell_sub_{idx}_{uuid.uuid4().hex[:4]}"
-                root_task.subtasks.append(
-                    CellTask(
-                        id=sub_id,
-                        name=f"SubCell_{idx}",
-                        goal=f"Execute sub-component partition {idx} of {macro_goal}",
-                        inputs={"partition": idx}
-                    )
-                )
+                worker_task.subtasks.append(asst_task)
+
+            root_task.subtasks.append(worker_task)
 
         return root_task
 
-class SubAgentWorker:
+class MicroAssistantWorker:
     """
-    Autonomous execution unit that executes a single CellTask in isolation.
+    Leaf execution unit that computes sub-chunk vector transformations in isolation.
     """
     def __init__(self, task: CellTask):
         self.task = task
@@ -88,73 +96,81 @@ class SubAgentWorker:
         self.task.status = "RUNNING"
         t0 = time.perf_counter()
 
-        # Execute isolated workload
-        inputs = self.task.inputs
-        if "chunk" in inputs:
-            # Heavy parallel compute simulation (e.g. math transformation)
-            chunk = inputs["chunk"]
-            # Fast vectorized/mapped math
-            transformed = [x * x + 7 for x in chunk]
-            self.task.result = {"count": len(chunk), "sum": sum(transformed), "sample": transformed[:3]}
-        else:
-            # Modular pipeline task
-            time.sleep(0.02)  # Simulated parallel async fiber workload
-            self.task.result = f"Successfully satisfied goal: [{self.task.goal}]"
+        chunk = self.task.inputs.get("chunk", [])
+        # Tight vectorized loop
+        transformed = [x * x + 7 for x in chunk]
+        total_sum = sum(transformed)
 
         t1 = time.perf_counter()
         self.task.duration_ms = (t1 - t0) * 1000
         self.task.status = "COMPLETED"
+        self.task.result = {
+            "count": len(chunk),
+            "sum": total_sum,
+            "sample": transformed[:3] if transformed else []
+        }
         return self.task
 
-class ParallelCellEngine:
+class HierarchicalSwarmCoordinator:
     """
-    Multi-threaded, multi-agent orchestrator managing recursive parallel workers.
+    Orchestrates the complete 3-Tier Hierarchical Swarm across threads and fibers.
     """
-    def __init__(self, max_workers: int = 8):
-        self.max_workers = max_workers
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)
+    def __init__(self, workers_count: int = 4, assistants_per_worker: int = 4):
+        self.workers_count = workers_count
+        self.assistants_per_worker = assistants_per_worker
 
-    def run_goal(self, macro_goal: str, payload: Any = None) -> Dict[str, Any]:
-        t_start = time.perf_counter()
-        
-        # 1. Automatic Decomposition
-        root_task = TaskDecomposer.decompose(macro_goal, payload)
-        
-        print(f"[*] Macro Goal: '{macro_goal}'")
-        print(f"[*] Automatically decomposed into {len(root_task.subtasks)} parallel Sub-Agent Cells.")
+    def run_swarm(self, macro_goal: str, payload: Any = None) -> Dict[str, Any]:
+        t0 = time.perf_counter()
+        master_task = TaskDecomposer.decompose(
+            macro_goal,
+            payload,
+            workers_count=self.workers_count,
+            assistants_per_worker=self.assistants_per_worker
+        )
+        master_task.status = "RUNNING"
 
-        # 2. Parallel Dispatch across SubAgents
-        futures = {}
-        for subtask in root_task.subtasks:
-            worker = SubAgentWorker(subtask)
-            future = self.executor.submit(worker.execute)
-            futures[future] = subtask
+        # Collect all micro-assistant leaf tasks
+        assistant_tasks: List[CellTask] = []
+        for worker in master_task.subtasks:
+            worker.status = "RUNNING"
+            for asst in worker.subtasks:
+                assistant_tasks.append(asst)
 
-        # 3. Collection & Synthesis
-        completed_results = []
-        for future in as_completed(futures):
-            finished_task = future.result()
-            completed_results.append({
-                "cell_id": finished_task.id,
-                "name": finished_task.name,
-                "status": finished_task.status,
-                "duration_ms": round(finished_task.duration_ms, 2),
-                "output": finished_task.result
-            })
+        # Execute micro-assistant leaves in parallel
+        total_leaves = len(assistant_tasks)
+        with ThreadPoolExecutor(max_workers=max(1, total_leaves)) as pool:
+            futures = [pool.submit(MicroAssistantWorker(task).execute) for task in assistant_tasks]
+            for f in as_completed(futures):
+                _ = f.result()
 
-        t_end = time.perf_counter()
-        total_time_ms = (t_end - t_start) * 1000
+        # Bottom-up reduction: Assistant -> Worker -> Master
+        global_sum = 0
+        global_count = 0
+        for worker in master_task.subtasks:
+            worker_sum = sum(asst.result["sum"] for asst in worker.subtasks if asst.result)
+            worker_count = sum(asst.result["count"] for asst in worker.subtasks if asst.result)
+            worker.result = {"worker_sum": worker_sum, "worker_count": worker_count}
+            worker.status = "COMPLETED"
+            global_sum += worker_sum
+            global_count += worker_count
 
-        # Synthesis
-        root_task.result = completed_results
-        root_task.status = "COMPLETED"
-        root_task.duration_ms = total_time_ms
-
-        summary = {
-            "root_id": root_task.id,
-            "goal": macro_goal,
-            "sub_cells_executed": len(completed_results),
-            "total_wall_time_ms": round(total_time_ms, 2),
-            "results": completed_results
+        t1 = time.perf_counter()
+        master_task.duration_ms = (t1 - t0) * 1000
+        master_task.status = "COMPLETED"
+        master_task.result = {
+            "total_items": global_count,
+            "global_sum": global_sum,
+            "active_workers": len(master_task.subtasks),
+            "total_active_leaves": total_leaves
         }
-        return summary
+
+        return {
+            "master_id": master_task.id,
+            "goal": master_task.goal,
+            "status": master_task.status,
+            "wall_time_ms": master_task.duration_ms,
+            "active_workers": len(master_task.subtasks),
+            "assistants_per_worker": self.assistants_per_worker,
+            "total_active_leaves": total_leaves,
+            "result": master_task.result
+        }

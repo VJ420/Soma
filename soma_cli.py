@@ -166,9 +166,9 @@ def main():
                 print(js_code)
 
         elif args.command == "swarm":
-            from agentic_infra import ParallelCellEngine
-            engine = ParallelCellEngine()
-            result = engine.run_goal(args.goal)
+            from agentic_infra import HierarchicalSwarmCoordinator
+            coordinator = HierarchicalSwarmCoordinator(workers_count=4, assistants_per_worker=4)
+            result = coordinator.run_swarm(args.goal)
             print(json.dumps(result, indent=2))
 
         elif args.command == "metrics":

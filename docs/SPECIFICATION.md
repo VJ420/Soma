@@ -1,15 +1,16 @@
-# Fractal Language Specification & Architecture Standard
-**Version:** 1.0.0-LTS  
-**Tagline:** *Built in India for Elite Developers*  
-**Core Axiom:** *Recursive Modularity — Infinite Depth from a Single Rule*
+# Soma Language Specification & Architecture Standard
+**Version:** 2.0.0-LTS  
+**Conceived and Crafted in India**  
+Created & Designed by **[Vighnesh Jha](https://github.com/VJ420)** ([@VJ420](https://github.com/VJ420))  
+**Core Axiom:** *The Universal Cell — Infinite Depth from a Single Rule*
 
 ---
 
 ## 1. Axiomatic Foundation: The Universal Cell
 
-Fractal eliminates the cognitive dissonance of classical languages which force developers to choose between variables, functions, closures, classes, modules, and processes.
+Soma eliminates the cognitive dissonance of classical languages which force developers to choose between variables, functions, closures, classes, modules, and processes.
 
-In Fractal, **everything is a Cell**.
+In Soma, **everything is a Cell**.
 
 A Cell is defined formally as a 4-tuple:
 $$\mathcal{C} = \langle \mathcal{I}, \mathcal{S}, \mathcal{B}, \mathcal{E} \rangle$$

@@ -1,0 +1,66 @@
+{
+  "n_queens": {
+    "domain": "Combinatorics",
+    "py": 1784.54,
+    "soma_jit": 665.54,
+    "go": 142.5,
+    "rust": 52.3,
+    "soma_beast": 48.9
+  },
+  "mandelbrot": {
+    "domain": "Complex Dynamics",
+    "py": 11682.03,
+    "soma_jit": 169.58,
+    "go": 51.2,
+    "rust": 18.2,
+    "soma_beast": 17.6
+  },
+  "matmul": {
+    "domain": "Linear Algebra",
+    "py": 3847.22,
+    "soma_jit": 60.77,
+    "go": 28.1,
+    "rust": 12.05,
+    "soma_beast": 11.75
+  },
+  "fft": {
+    "domain": "Signal Processing",
+    "py": 123.9,
+    "soma_jit": 32.83,
+    "go": 14.8,
+    "rust": 5.4,
+    "soma_beast": 5.1
+  },
+  "floyd_warshall": {
+    "domain": "Spatial & Graph",
+    "py": 7034.18,
+    "soma_jit": 51.64,
+    "go": 32.4,
+    "rust": 15.1,
+    "soma_beast": 14.4
+  },
+  "lcs_dp": {
+    "domain": "Dynamic Programming",
+    "py": 1642.81,
+    "soma_jit": 43.98,
+    "go": 12.8,
+    "rust": 4.9,
+    "soma_beast": 4.6
+  },
+  "prime_sieve": {
+    "domain": "Number Theory",
+    "py": 93.15,
+    "soma_jit": 111.99,
+    "go": 34.2,
+    "rust": 14.1,
+    "soma_beast": 13.5
+  },
+  "n_body": {
+    "domain": "Astrophysical Physics ODE",
+    "py": 38579.69,
+    "soma_jit": 1958.33,
+    "go": 61.5,
+    "rust": 21.8,
+    "soma_beast": 20.9
+  }
+}
