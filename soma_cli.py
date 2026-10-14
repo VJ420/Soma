@@ -1,7 +1,8 @@
 """Soma command line. One language, one command.
 
-`soma run file.sm` compiles to native code when g++ or clang++ is on PATH.
-Otherwise it runs on V8 when Node.js is installed.
+On Windows, `soma run file.sm` compiles with the C# compiler that ships with
+the operating system and runs on the CLR. Elsewhere it compiles with g++ or
+clang++ when one is on PATH, and otherwise runs on V8 when Node.js is installed.
 `--engine interpreter` walks the program in-process. `--engine vm` runs bytecode.
 """
 import argparse
@@ -11,11 +12,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 from lexer import Lexer
 from parser import Parser
 from transpiler_js import JsTranspiler, TranspileError
 from aot_engine.native_compiler import NativeCompiler, NativeCompileError
+from aot_engine.clr_compiler import ClrCompiler
 from compiler import Compiler, CompileError
 from vm import FractalVM
 from core.container import FractalContainer
@@ -40,15 +43,63 @@ def read_program(path: str):
         return parse_source(handle.read())
 
 
+def framework_compiler() -> str | None:
+    """C# compiler that ships with Windows. No separate install."""
+    if os.name != "nt":
+        return None
+    root = os.environ.get("SystemRoot") or os.environ.get("WINDIR") or r"C:\Windows"
+    for folder in ("Framework64", "Framework"):
+        path = os.path.join(root, "Microsoft.NET", folder, "v4.0.30319", "csc.exe")
+        if os.path.isfile(path):
+            return path
+    return None
+
+
 def choose_engine(requested: str | None) -> str:
     if requested:
         return requested
+    if framework_compiler():
+        return "clr"
     if shutil.which("g++") or shutil.which("clang++"):
         return "native"
     if shutil.which("node"):
         return "jit"
-    print("No C++ compiler or Node.js found. Running the Soma interpreter.", file=sys.stderr)
+    print("No Windows C# compiler, C++ compiler, or Node.js found. Running the Soma interpreter.", file=sys.stderr)
     return "interpreter"
+
+
+def execute_clr(path: str) -> None:
+    compiler = framework_compiler()
+    if compiler is None:
+        print("Soma's Windows engine needs the .NET Framework C# compiler, csc.exe.", file=sys.stderr)
+        raise SystemExit(2)
+    csharp = ClrCompiler().compile_program(read_program(path))
+    work = os.path.join(os.path.dirname(os.path.abspath(path)) or ".", ".soma-build")
+    os.makedirs(work, exist_ok=True)
+    source = os.path.join(work, "Program.cs")
+    binary = os.path.join(work, "Program.exe")
+    with open(source, "w", encoding="utf-8") as handle:
+        handle.write(csharp)
+    built = subprocess.run(
+        [compiler, "/nologo", "/optimize+", "/t:exe", "/out:" + binary, source],
+        capture_output=True,
+        text=True,
+    )
+    if built.returncode != 0:
+        print(built.stderr or built.stdout, file=sys.stderr)
+        raise SystemExit(built.returncode or 1)
+    completed = None
+    for attempt in range(4):
+        try:
+            completed = subprocess.run([binary])
+            break
+        except OSError as error:
+            if getattr(error, "winerror", None) != 4551 or attempt == 3:
+                print(error, file=sys.stderr)
+                raise SystemExit(1)
+            time.sleep(0.2)
+    if completed.returncode != 0:
+        raise SystemExit(completed.returncode)
 
 
 def execute_native(path: str) -> None:
@@ -76,6 +127,9 @@ def execute_native(path: str) -> None:
 
 
 def execute(path: str, engine: str, container: FractalContainer) -> None:
+    if engine == "clr":
+        execute_clr(path)
+        return
     if engine == "native":
         execute_native(path)
         return
@@ -128,7 +182,7 @@ def main() -> None:
 
     run_parser = subparsers.add_parser("run", help="Run a .sm or .fc program")
     run_parser.add_argument("file")
-    run_parser.add_argument("--engine", choices=("native", "jit", "interpreter", "vm"))
+    run_parser.add_argument("--engine", choices=("clr", "native", "jit", "interpreter", "vm"))
     run_parser.add_argument("--sandbox", action="store_true", help="Deny file and network access")
     run_parser.add_argument("--check", action="store_true", help="Print inferred types, then run")
 
@@ -142,6 +196,7 @@ def main() -> None:
 
     for name, help_text in (
         ("emit-cpp", "Emit C++"),
+        ("emit-cs", "Emit C# for the Windows CLR"),
         ("emit-js", "Emit JavaScript"),
     ):
         command = subparsers.add_parser(name, help=help_text)
@@ -174,6 +229,9 @@ def main() -> None:
         elif args.command == "emit-cpp":
             cpp = NativeCompiler().compile_program(read_program(args.file))
             _write_or_print(cpp, args.output, "C++")
+        elif args.command == "emit-cs":
+            csharp = ClrCompiler().compile_program(read_program(args.file))
+            _write_or_print(csharp, args.output, "C#")
         elif args.command == "emit-js":
             javascript = JsTranspiler(
                 base_dir=os.path.dirname(os.path.abspath(args.file)) or "."

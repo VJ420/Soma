@@ -11,13 +11,13 @@ Created by **[Vighnesh Jha](https://github.com/VJ420)** ([@VJ420](https://github
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Build Status](https://img.shields.io/badge/Tests-unittest-brightgreen.svg?style=flat-square)]()
 [![Architecture](https://img.shields.io/badge/Architecture-Universal%20Cell-9cf.svg?style=flat-square)]()
-[![Execution](https://img.shields.io/badge/Execution-Native%20C%2B%2B%20when%20available-orange.svg?style=flat-square)]()
+[![Execution](https://img.shields.io/badge/Execution-Windows%20CLR%20or%20native%20C%2B%2B-orange.svg?style=flat-square)]()
 
 <br/>
 
 > **"One Primitive. Zero Ceremony. One command."**  
 > Soma unifies variables, functions, objects, modules, and concurrent fibers into one construct: **The Universal Cell**.  
-> `soma run` compiles that source to native code when a C++ compiler is installed, and runs it on V8 otherwise. The same file can run on the interpreter or the bytecode machine.
+> On Windows, `soma run` compiles with the C# compiler that is already installed. Elsewhere it uses `g++` or `clang++` when one is installed, and Node otherwise. The same file can run on the interpreter or the bytecode machine.
 
 ---
 
@@ -32,9 +32,9 @@ square(x): x * x
 5 -> square -> print
 ```
 
-`soma run file.sm` compiles that file to C++ when `g++` or `clang++` is installed, and runs it on Node otherwise.
+On Windows, `soma run file.sm` compiles with the C# compiler that ships with Windows and runs on the CLR. No extra compiler install. On other systems it compiles with `g++` or `clang++` when one is installed, and runs on Node otherwise.
 
-On the published run Soma was first of six languages. Geometric-mean kernel time was **0.84×** the fastest other language across 17 tasks, and all 17 checksums matched. The machine was an AMD EPYC 9V45 on 14 Oct 2026. The full table is [docs/MEASURED_PERFORMANCE.md](docs/MEASURED_PERFORMANCE.md). The task list, the cold-start times, and where Soma still trails are on that page.
+On the published run the C++ lowering was first of six languages. Geometric-mean kernel time was **0.84×** the fastest other language across 17 tasks, and all 17 checksums matched. The machine was an AMD EPYC 9V45 on 14 Oct 2026. A separate Windows run, on an Intel Core i7-10510U with the CLR, is in the same document. Both tables, and where each one trails, are [docs/MEASURED_PERFORMANCE.md](docs/MEASURED_PERFORMANCE.md).
 
 ## Table of Contents
 
@@ -70,7 +70,7 @@ This creates massive syntactic tax, repetitive boilerplate (`self`, `__init__`, 
 **Soma resolves this fragmentation through Recursive Modularity.**  
 The name **Soma** comes from the biological core—the cell body from which all living structures grow. In Soma, every single language element is an instance of one self-similar construct: **The Universal Cell**.
 
-You write concise domain code. `python soma_cli.py run file.sm` compiles it with `g++` or `clang++` when one of those is on PATH. Otherwise it translates the same source to JavaScript and runs it on Node. `--engine interpreter` and `--engine vm` run it in-process.
+You write concise domain code. On Windows, `python soma_cli.py run file.sm` compiles it with `csc.exe`, the C# compiler that is already on the machine, and the CLR runs it. On other systems it uses `g++` or `clang++` when one is on PATH, and otherwise translates the same source to JavaScript and runs it on Node. `--engine interpreter` and `--engine vm` run it in-process.
 
 ---
 
@@ -128,7 +128,7 @@ route_status(code):
 ```
 
 ### 5. One language, one run command
-`soma run file.sm` compiles to native code when `g++` or `clang++` is installed. The same source can also run on V8 (`--engine jit`), the in-process interpreter (`--engine interpreter`), or the bytecode machine (`--engine vm`). The measured ranking of that native path is in [docs/MEASURED_PERFORMANCE.md](docs/MEASURED_PERFORMANCE.md).
+On Windows, `soma run file.sm` compiles with `csc.exe` and runs on the CLR. Elsewhere it compiles to native code when `g++` or `clang++` is installed. The same source can also run on V8 (`--engine jit`), the in-process interpreter (`--engine interpreter`), or the bytecode machine (`--engine vm`). Both measured tables are in [docs/MEASURED_PERFORMANCE.md](docs/MEASURED_PERFORMANCE.md).
 
 ### 6. First-Class Autonomous Agent Swarms (SMAA-V2)
 `soma swarm` splits a goal into a master cell, four worker cells, and sixteen assistant cells, then runs the leaves on Python threads.
@@ -157,7 +157,11 @@ On the published run (GitHub Actions 38517496358, commit `468ec56`, AMD EPYC 9V4
 | 5 | JavaScript | 3.46× |
 | 6 | Python | 62.78× |
 
-That ranking is one machine and one suite. Longest increasing subsequence, knapsack, and Life still trail the leader on that run. An earlier 11-task run on an AMD EPYC 7763 measured 0.69×. Reproduce with:
+That ranking is one machine and the C++ engine. Longest increasing subsequence, knapsack, and Life still trail the leader on that run. An earlier 11-task run on an AMD EPYC 7763 measured 0.69×.
+
+On the same day, an Intel Core i7-10510U ran the Windows CLR against the languages installed there. At the published sizes, Soma's geometric mean was **70.3×** CPython and **3.63×** Node, with Node faster only on binary trees. At sizes past that ceiling, with a handwritten C# port on the same `csc.exe` added in, the geometric mean was **102×** CPython, **3.09×** Node, and **1.92×** handwritten C#. Soma was fastest of those four on 10 of 17 tasks. All checksums matched. The per-task numbers are in [docs/MEASURED_PERFORMANCE.md](docs/MEASURED_PERFORMANCE.md).
+
+Reproduce the published suite with:
 
 ```bash
 python benchmarks/extreme/run_benchmarks.py --output benchmarks/extreme/results
@@ -246,21 +250,21 @@ Soma has one syntax and four ways to run it. `soma run` picks the first one that
                 │                    │
                 ▼                    ▼
 ┌───────────────────────────┐ ┌──────────────────────────┐
-│  Native (default)         │ │  V8, if no C++ compiler  │
-│  Soma cells to C++        │ │  --engine jit            │
-│  g++ or clang++ -O3       │ │                          │
+│  Windows default          │ │  Native, when no csc.exe │
+│  Soma cells to C# 5       │ │  Soma cells to C++       │
+│  csc.exe, then the CLR    │ │  g++ or clang++ -O3      │
 └───────────────────────────┘ └──────────────────────────┘
                 │                    │
                 ▼                    ▼
 ┌───────────────────────────┐ ┌──────────────────────────┐
-│  Interpreter              │ │  Bytecode machine        │
-│  --engine interpreter     │ │  --engine vm             │
-│  spawn, REPL, tracebacks  │ │  in-process              │
+│  V8, if neither compiler  │ │  Interpreter or bytecode │
+│  --engine jit             │ │  --engine interpreter/vm │
 └───────────────────────────┘ └──────────────────────────┘
 ```
 
-- **Native**: `aot_engine/native_compiler.py` lowers cells to C++ and `soma run` builds that with `-O3 -std=c++20 -march=native`. This is the engine in the measured ranking.
-- **V8**: `transpiler_js.py` emits JavaScript and Node runs it. This is the fallback when no C++ compiler is installed.
+- **Windows CLR**: `aot_engine/clr_compiler.py` lowers cells to C# 5. `soma run` builds that with the `csc.exe` already on Windows. This is the default on Windows. The laptop table in the measured-performance document is this engine.
+- **Native**: `aot_engine/native_compiler.py` lowers cells to C++ and `soma run` builds that with `-O3 -std=c++20 -march=native`. This is the engine in the published EPYC ranking, and the default where `csc.exe` is absent and a C++ compiler is present.
+- **V8**: `transpiler_js.py` emits JavaScript and Node runs it. This is the fallback when neither compiler is installed.
 - **Interpreter**: walks the AST in Python. The REPL uses it. `spawn` is defined here.
 - **Bytecode**: `compiler.py` and `vm.py` run a stack machine in Python.
 
@@ -307,7 +311,8 @@ These are the paths a visitor needs. The other files implement them.
 | Path | What it is |
 |---|---|
 | `soma_cli.py` | The command. `soma run`, `soma repl`, `soma swarm`, `soma --check`. |
-| `aot_engine/native_compiler.py` | The measured engine. Soma cells lowered to C++. |
+| `aot_engine/clr_compiler.py` | Windows default. Soma cells lowered to C# for the CLR. |
+| `aot_engine/native_compiler.py` | C++ lowering. The engine in the published EPYC ranking. |
 | `examples/` | Programs you can run. `.sm` is the usual extension. `.fc` still loads. |
 | `benchmarks/extreme/` | The only cross-language ranking. Report: `benchmarks/extreme/REPORT.md`. |
 | `docs/` | Specification, the measured table, how the compiler lowers code, the standard library, and the benchmark rules. |
@@ -320,7 +325,8 @@ soma-lang/
 ├── lexer.py                    # Indentation-aware lexer
 ├── parser.py                   # Parser, including match and pipelines
 ├── ast_nodes.py                # AST
-├── aot_engine/native_compiler.py
+├── aot_engine/clr_compiler.py    # Windows default. C# for csc.exe
+├── aot_engine/native_compiler.py # C++ lowering used in the published ranking
 ├── transpiler_js.py            # V8 fallback
 ├── runtime.py                  # In-process interpreter entry used by the CLI
 ├── runtime_engine/enterprise_interpreter.py
@@ -351,8 +357,8 @@ soma-lang/
 
 ### Prerequisites
 - **Python 3.12+** (CLI, parser, and the in-process engines)
-- **g++ or clang++** with C++20 (the default `soma run` engine, and the measured one)
-- **Node.js 18+** (fallback when no C++ compiler is installed)
+- **Windows**: nothing else. `soma run` uses the C# compiler that ships with Windows.
+- **Elsewhere**: `g++` or `clang++` with C++20, or Node.js 18+ when no C++ compiler is installed
 
 ### Clone & Setup
 ```bash
@@ -370,7 +376,7 @@ python soma_cli.py run examples/01_hello_cells.sm
 ## Unified CLI Reference
 
 ```bash
-# 1. Native when g++ or clang++ exists, otherwise V8.
+# 1. Windows: csc.exe and the CLR. Elsewhere: g++ or clang++, otherwise V8.
 python soma_cli.py run examples/01_hello_cells.sm
 
 # 2. Force V8.
@@ -385,8 +391,9 @@ python soma_cli.py vm examples/01_hello_cells.sm
 # 5. Print bytecode.
 python soma_cli.py dis examples/01_hello_cells.sm
 
-# 6. Emit the same C++ the native engine compiles, without running it.
+# 6. Emit the C++ the native engine compiles, or the C# the Windows engine compiles.
 python soma_cli.py emit-cpp examples/04_mandelbrot_extreme.sm -o kernel.cpp
+python soma_cli.py emit-cs examples/04_mandelbrot_extreme.sm -o kernel.cs
 
 # 7. Run the agent swarm
 python soma_cli.py swarm "Analyze 5M telemetry records concurrently"

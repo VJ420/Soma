@@ -1,5 +1,6 @@
 __pycache__/
 *.py[cod]
+.soma-build/
 
 benchmarks/extreme/smoke-results/
 benchmarks/extreme/results/build/
