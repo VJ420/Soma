@@ -252,6 +252,207 @@ fn stencil(grid: usize) -> f64 {
     current.iter().enumerate().map(|(index, value)| value * (index as f64 + 1.0)).sum()
 }
 
+fn dijkstra(n: usize) -> f64 {
+    const INF: i64 = 1_000_000_000;
+    const MOD: i64 = 1_000_000_007;
+    let mut dist = vec![INF; n];
+    let mut used = vec![0i32; n];
+    dist[0] = 0;
+    for _ in 0..n {
+        let mut selected = 0usize;
+        let mut best = INF;
+        let mut found = 0;
+        for index in 0..n {
+            if used[index] == 0 && dist[index] < best {
+                best = dist[index];
+                selected = index;
+                found = 1;
+            }
+        }
+        if found == 1 {
+            used[selected] = 1;
+            for vertex in 0..n {
+                if used[vertex] == 0 && selected != vertex {
+                    let weight = ((selected * 17 + vertex * 13) % 97 + 1) as i64;
+                    let candidate = dist[selected] + weight;
+                    if candidate < dist[vertex] {
+                        dist[vertex] = candidate;
+                    }
+                }
+            }
+        }
+    }
+    let mut checksum = 0i64;
+    for (index, value) in dist.iter().enumerate() {
+        checksum = (checksum + value * (index as i64 + 1)) % MOD;
+    }
+    checksum as f64
+}
+
+fn floyd(n: usize) -> f64 {
+    const MOD: i64 = 1_000_000_007;
+    let mut dist = vec![0i64; n * n];
+    for row in 0..n {
+        for column in 0..n {
+            dist[row * n + column] = if row == column {
+                0
+            } else {
+                ((row * 17 + column * 13) % 97 + 1) as i64
+            };
+        }
+    }
+    for via in 0..n {
+        for row in 0..n {
+            let via_cost = dist[row * n + via];
+            for column in 0..n {
+                let candidate = via_cost + dist[via * n + column];
+                let index = row * n + column;
+                if candidate < dist[index] {
+                    dist[index] = candidate;
+                }
+            }
+        }
+    }
+    let mut checksum = 0i64;
+    for (index, value) in dist.iter().enumerate() {
+        checksum = (checksum + value * (index as i64 + 1)) % MOD;
+    }
+    checksum as f64
+}
+
+fn knapsack(n: usize) -> f64 {
+    const MOD: i64 = 1_000_000_007;
+    let mut best = vec![0i64; n + 1];
+    for item in 1..=n {
+        let weight = (item % 17) + 1;
+        let value = ((item * 3) % 23 + 1) as i64;
+        for slot in (weight..=n).rev() {
+            let candidate = best[slot - weight] + value;
+            if candidate > best[slot] {
+                best[slot] = candidate;
+            }
+        }
+    }
+    let mut checksum = 0i64;
+    for (index, value) in best.iter().enumerate() {
+        checksum = (checksum + value * (index as i64 + 1)) % MOD;
+    }
+    checksum as f64
+}
+
+fn editdist(n: usize) -> f64 {
+    const MOD: i64 = 1_000_000_007;
+    let mut previous: Vec<i64> = (0..=n).map(|index| index as i64).collect();
+    let mut current = vec![0i64; n + 1];
+    for row in 1..=n {
+        current[0] = row as i64;
+        let left_symbol = (row * 3) % 26;
+        for column in 1..=n {
+            let cost = if left_symbol == (column * 5) % 26 { 0 } else { 1 };
+            let mut choice = previous[column] + 1;
+            let insert = current[column - 1] + 1;
+            let replace = previous[column - 1] + cost;
+            if insert < choice {
+                choice = insert;
+            }
+            if replace < choice {
+                choice = replace;
+            }
+            current[column] = choice;
+        }
+        std::mem::swap(&mut previous, &mut current);
+    }
+    let mut checksum = 0i64;
+    for (index, value) in previous.iter().enumerate() {
+        checksum = (checksum + value * (index as i64 + 1)) % MOD;
+    }
+    checksum as f64
+}
+
+fn lis(n: usize) -> f64 {
+    const MOD: i64 = 1_000_000_007;
+    let mut tails = vec![0i64; n];
+    let mut length = 0usize;
+    let mut state = 1i64;
+    for _ in 0..n {
+        state = (state * 48271) % 2147483647;
+        let value = state % 1_000_003;
+        let mut low = 0usize;
+        let mut high = length;
+        while low < high {
+            let mid = (low + high) / 2;
+            if tails[mid] < value {
+                low = mid + 1;
+            } else {
+                high = mid;
+            }
+        }
+        if low == length {
+            tails[length] = value;
+            length += 1;
+        } else {
+            tails[low] = value;
+        }
+    }
+    let mut checksum = 0i64;
+    for index in 0..length {
+        checksum = (checksum + tails[index] * (index as i64 + 1)) % MOD;
+    }
+    checksum as f64
+}
+
+fn life(n: usize) -> f64 {
+    let cells = n * n;
+    let mut current = vec![0i32; cells];
+    let mut next = vec![0i32; cells];
+    for index in 0..n {
+        current[index * n + index] = 1;
+        current[index * n + ((index * 3) % n)] = 1;
+    }
+    for _ in 0..12 {
+        for y in 0..n {
+            for x in 0..n {
+                let mut neighbors = 0;
+                if y > 0 && x > 0 && current[(y - 1) * n + (x - 1)] == 1 {
+                    neighbors += 1;
+                }
+                if y > 0 && current[(y - 1) * n + x] == 1 {
+                    neighbors += 1;
+                }
+                if y > 0 && x + 1 < n && current[(y - 1) * n + (x + 1)] == 1 {
+                    neighbors += 1;
+                }
+                if x > 0 && current[y * n + (x - 1)] == 1 {
+                    neighbors += 1;
+                }
+                if x + 1 < n && current[y * n + (x + 1)] == 1 {
+                    neighbors += 1;
+                }
+                if y + 1 < n && x > 0 && current[(y + 1) * n + (x - 1)] == 1 {
+                    neighbors += 1;
+                }
+                if y + 1 < n && current[(y + 1) * n + x] == 1 {
+                    neighbors += 1;
+                }
+                if y + 1 < n && x + 1 < n && current[(y + 1) * n + (x + 1)] == 1 {
+                    neighbors += 1;
+                }
+                let alive = current[y * n + x];
+                let mut born = 0;
+                if alive == 1 && (neighbors == 2 || neighbors == 3) {
+                    born = 1;
+                }
+                if alive == 0 && neighbors == 3 {
+                    born = 1;
+                }
+                next[y * n + x] = born;
+            }
+        }
+        std::mem::swap(&mut current, &mut next);
+    }
+    current.iter().enumerate().map(|(index, value)| *value as f64 * (index as f64 + 1.0)).sum()
+}
+
 fn histogram(sample_count: usize) -> f64 {
     let mut bins = vec![0i64; 1024];
     let mut state = 1i64;
@@ -280,6 +481,12 @@ fn main() {
         "sort" => sort_checksum,
         "stencil" => stencil,
         "histogram" => histogram,
+        "dijkstra" => dijkstra,
+        "floyd" => floyd,
+        "knapsack" => knapsack,
+        "editdist" => editdist,
+        "lis" => lis,
+        "life" => life,
         _ => panic!("unknown workload"),
     };
     let started = Instant::now();

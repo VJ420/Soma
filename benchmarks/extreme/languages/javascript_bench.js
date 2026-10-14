@@ -218,6 +218,164 @@ function stencil(grid) {
   return checksum;
 }
 
+const MOD = 1000000007;
+const INF = 1000000000;
+
+function dijkstra(n) {
+  const dist = new Array(n).fill(INF);
+  const used = new Array(n).fill(0);
+  dist[0] = 0;
+  for (let step = 0; step < n; step++) {
+    let selected = 0;
+    let best = INF;
+    let found = 0;
+    for (let index = 0; index < n; index++) {
+      if (used[index] === 0 && dist[index] < best) {
+        best = dist[index];
+        selected = index;
+        found = 1;
+      }
+    }
+    if (found === 1) {
+      used[selected] = 1;
+      for (let vertex = 0; vertex < n; vertex++) {
+        if (used[vertex] === 0 && selected !== vertex) {
+          const weight = (selected * 17 + vertex * 13) % 97 + 1;
+          const candidate = dist[selected] + weight;
+          if (candidate < dist[vertex]) dist[vertex] = candidate;
+        }
+      }
+    }
+  }
+  let checksum = 0;
+  for (let index = 0; index < n; index++) checksum = (checksum + dist[index] * (index + 1)) % MOD;
+  return checksum;
+}
+
+function floyd(n) {
+  const dist = new Array(n * n).fill(0);
+  for (let row = 0; row < n; row++) {
+    for (let column = 0; column < n; column++) {
+      dist[row * n + column] = row === column ? 0 : (row * 17 + column * 13) % 97 + 1;
+    }
+  }
+  for (let via = 0; via < n; via++) {
+    for (let row = 0; row < n; row++) {
+      const viaCost = dist[row * n + via];
+      for (let column = 0; column < n; column++) {
+        const candidate = viaCost + dist[via * n + column];
+        const index = row * n + column;
+        if (candidate < dist[index]) dist[index] = candidate;
+      }
+    }
+  }
+  let checksum = 0;
+  for (let index = 0; index < dist.length; index++) checksum = (checksum + dist[index] * (index + 1)) % MOD;
+  return checksum;
+}
+
+function knapsack(n) {
+  const best = new Array(n + 1).fill(0);
+  for (let item = 1; item <= n; item++) {
+    const weight = (item % 17) + 1;
+    const value = (item * 3) % 23 + 1;
+    for (let slot = n; slot >= weight; slot--) {
+      const candidate = best[slot - weight] + value;
+      if (candidate > best[slot]) best[slot] = candidate;
+    }
+  }
+  let checksum = 0;
+  for (let index = 0; index < best.length; index++) checksum = (checksum + best[index] * (index + 1)) % MOD;
+  return checksum;
+}
+
+function editdist(n) {
+  const previous = new Array(n + 1);
+  const current = new Array(n + 1).fill(0);
+  for (let index = 0; index <= n; index++) previous[index] = index;
+  for (let row = 1; row <= n; row++) {
+    current[0] = row;
+    const leftSymbol = (row * 3) % 26;
+    for (let column = 1; column <= n; column++) {
+      const cost = leftSymbol === (column * 5) % 26 ? 0 : 1;
+      let choice = previous[column] + 1;
+      const insert = current[column - 1] + 1;
+      const replace = previous[column - 1] + cost;
+      if (insert < choice) choice = insert;
+      if (replace < choice) choice = replace;
+      current[column] = choice;
+    }
+    for (let index = 0; index <= n; index++) {
+      const saved = previous[index];
+      previous[index] = current[index];
+      current[index] = saved;
+    }
+  }
+  let checksum = 0;
+  for (let index = 0; index <= n; index++) checksum = (checksum + previous[index] * (index + 1)) % MOD;
+  return checksum;
+}
+
+function lis(n) {
+  const tails = new Array(n).fill(0);
+  let length = 0;
+  let state = 1;
+  for (let sample = 0; sample < n; sample++) {
+    state = (state * 48271) % 2147483647;
+    const value = state % 1000003;
+    let low = 0;
+    let high = length;
+    while (low < high) {
+      const mid = Math.floor((low + high) / 2);
+      if (tails[mid] < value) low = mid + 1;
+      else high = mid;
+    }
+    if (low === length) {
+      tails[length] = value;
+      length += 1;
+    } else tails[low] = value;
+  }
+  let checksum = 0;
+  for (let index = 0; index < length; index++) checksum = (checksum + tails[index] * (index + 1)) % MOD;
+  return checksum;
+}
+
+function life(n) {
+  const cells = n * n;
+  let current = new Array(cells).fill(0);
+  let next = new Array(cells).fill(0);
+  for (let index = 0; index < n; index++) {
+    current[index * n + index] = 1;
+    current[index * n + ((index * 3) % n)] = 1;
+  }
+  for (let step = 0; step < 12; step++) {
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        let neighbors = 0;
+        if (y > 0 && x > 0 && current[(y - 1) * n + (x - 1)] === 1) neighbors += 1;
+        if (y > 0 && current[(y - 1) * n + x] === 1) neighbors += 1;
+        if (y > 0 && x + 1 < n && current[(y - 1) * n + (x + 1)] === 1) neighbors += 1;
+        if (x > 0 && current[y * n + (x - 1)] === 1) neighbors += 1;
+        if (x + 1 < n && current[y * n + (x + 1)] === 1) neighbors += 1;
+        if (y + 1 < n && x > 0 && current[(y + 1) * n + (x - 1)] === 1) neighbors += 1;
+        if (y + 1 < n && current[(y + 1) * n + x] === 1) neighbors += 1;
+        if (y + 1 < n && x + 1 < n && current[(y + 1) * n + (x + 1)] === 1) neighbors += 1;
+        const alive = current[y * n + x];
+        let born = 0;
+        if (alive === 1 && (neighbors === 2 || neighbors === 3)) born = 1;
+        if (alive === 0 && neighbors === 3) born = 1;
+        next[y * n + x] = born;
+      }
+    }
+    const swap = current;
+    current = next;
+    next = swap;
+  }
+  let checksum = 0;
+  for (let index = 0; index < cells; index++) checksum += current[index] * (index + 1);
+  return checksum;
+}
+
 function histogram(sampleCount) {
   const bins = new Array(1024).fill(0);
   let state = 1;
@@ -230,7 +388,7 @@ function histogram(sampleCount) {
   return checksum;
 }
 
-const workloads = { nqueens, mandelbrot, matmul, lcs, sieve, nbody, binarytrees, bfs, sort: mergesort, stencil, histogram };
+const workloads = { nqueens, mandelbrot, matmul, lcs, sieve, nbody, binarytrees, bfs, sort: mergesort, stencil, histogram, dijkstra, floyd, knapsack, editdist, lis, life };
 const [workload, sizeText, iterationsText] = process.argv.slice(2);
 let total = 0.0;
 const started = performance.now();

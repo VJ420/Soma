@@ -337,6 +337,226 @@ run_histogram(sample_count):
     index = index + 1
   checksum
 
+run_dijkstra(node_count):
+  dist = range(node_count)
+  used = range(node_count)
+  index = 0
+  while index < node_count:
+    dist[index] = 1000000000
+    used[index] = 0
+    index = index + 1
+  dist[0] = 0
+  step = 0
+  while step < node_count:
+    selected = 0
+    best = 1000000000
+    found = 0
+    index = 0
+    while index < node_count:
+      if (used[index] == 0) and (dist[index] < best):
+        best = dist[index]
+        selected = index
+        found = 1
+      index = index + 1
+    if found == 1:
+      used[selected] = 1
+      vertex = 0
+      while vertex < node_count:
+        if (used[vertex] == 0) and (selected != vertex):
+          weight = (selected * 17 + vertex * 13) % 97 + 1
+          candidate = dist[selected] + weight
+          if candidate < dist[vertex]:
+            dist[vertex] = candidate
+        vertex = vertex + 1
+    step = step + 1
+  checksum = 0
+  index = 0
+  while index < node_count:
+    checksum = (checksum + dist[index] * (index + 1)) % 1000000007
+    index = index + 1
+  checksum
+
+run_floyd(node_count):
+  cells = node_count * node_count
+  dist = range(cells)
+  row = 0
+  while row < node_count:
+    column = 0
+    while column < node_count:
+      if row == column:
+        dist[row * node_count + column] = 0
+      else:
+        dist[row * node_count + column] = (row * 17 + column * 13) % 97 + 1
+      column = column + 1
+    row = row + 1
+  via = 0
+  while via < node_count:
+    row = 0
+    while row < node_count:
+      via_cost = dist[row * node_count + via]
+      column = 0
+      while column < node_count:
+        candidate = via_cost + dist[via * node_count + column]
+        index = row * node_count + column
+        if candidate < dist[index]:
+          dist[index] = candidate
+        column = column + 1
+      row = row + 1
+    via = via + 1
+  checksum = 0
+  index = 0
+  while index < cells:
+    checksum = (checksum + dist[index] * (index + 1)) % 1000000007
+    index = index + 1
+  checksum
+
+run_knapsack(item_count):
+  best = range(item_count + 1)
+  clear = 0
+  while clear <= item_count:
+    best[clear] = 0
+    clear = clear + 1
+  item = 1
+  while item <= item_count:
+    weight = (item % 17) + 1
+    value = (item * 3) % 23 + 1
+    slot = item_count
+    while slot >= weight:
+      candidate = best[slot - weight] + value
+      if candidate > best[slot]:
+        best[slot] = candidate
+      slot = slot - 1
+    item = item + 1
+  checksum = 0
+  index = 0
+  while index <= item_count:
+    checksum = (checksum + best[index] * (index + 1)) % 1000000007
+    index = index + 1
+  checksum
+
+run_editdist(length):
+  previous = range(length + 1)
+  current = range(length + 1)
+  index = 0
+  while index <= length:
+    previous[index] = index
+    current[index] = 0
+    index = index + 1
+  row = 1
+  while row <= length:
+    current[0] = row
+    left_symbol = (row * 3) % 26
+    column = 1
+    while column <= length:
+      cost = 1
+      if left_symbol == (column * 5) % 26:
+        cost = 0
+      choice = previous[column] + 1
+      insert = current[column - 1] + 1
+      replace = previous[column - 1] + cost
+      if insert < choice:
+        choice = insert
+      if replace < choice:
+        choice = replace
+      current[column] = choice
+      column = column + 1
+    swap_row = previous
+    previous = current
+    current = swap_row
+    row = row + 1
+  checksum = 0
+  index = 0
+  while index <= length:
+    checksum = (checksum + previous[index] * (index + 1)) % 1000000007
+    index = index + 1
+  checksum
+
+run_lis(count):
+  tails = range(count)
+  length = 0
+  state = 1
+  sample = 0
+  while sample < count:
+    state = (state * 48271) % 2147483647
+    value = state % 1000003
+    low = 0
+    high = length
+    while low < high:
+      mid = int((low + high) / 2)
+      if tails[mid] < value:
+        low = mid + 1
+      else:
+        high = mid
+    if low == length:
+      tails[length] = value
+      length = length + 1
+    else:
+      tails[low] = value
+    sample = sample + 1
+  checksum = 0
+  index = 0
+  while index < length:
+    checksum = (checksum + tails[index] * (index + 1)) % 1000000007
+    index = index + 1
+  checksum
+
+run_life(grid):
+  cells = grid * grid
+  current = range(cells)
+  nxt = range(cells)
+  index = 0
+  while index < cells:
+    current[index] = 0
+    nxt[index] = 0
+    index = index + 1
+  index = 0
+  while index < grid:
+    current[index * grid + index] = 1
+    current[index * grid + ((index * 3) % grid)] = 1
+    index = index + 1
+  step = 0
+  while step < 12:
+    y = 0
+    while y < grid:
+      x = 0
+      while x < grid:
+        neighbors = 0
+        if (y > 0) and (x > 0) and (current[(y - 1) * grid + (x - 1)] == 1):
+          neighbors = neighbors + 1
+        if (y > 0) and (current[(y - 1) * grid + x] == 1):
+          neighbors = neighbors + 1
+        if (y > 0) and (x + 1 < grid) and (current[(y - 1) * grid + (x + 1)] == 1):
+          neighbors = neighbors + 1
+        if (x > 0) and (current[y * grid + (x - 1)] == 1):
+          neighbors = neighbors + 1
+        if (x + 1 < grid) and (current[y * grid + (x + 1)] == 1):
+          neighbors = neighbors + 1
+        if (y + 1 < grid) and (x > 0) and (current[(y + 1) * grid + (x - 1)] == 1):
+          neighbors = neighbors + 1
+        if (y + 1 < grid) and (current[(y + 1) * grid + x] == 1):
+          neighbors = neighbors + 1
+        if (y + 1 < grid) and (x + 1 < grid) and (current[(y + 1) * grid + (x + 1)] == 1):
+          neighbors = neighbors + 1
+        alive = current[y * grid + x]
+        born = 0
+        if (alive == 1) and ((neighbors == 2) or (neighbors == 3)):
+          born = 1
+        if (alive == 0) and (neighbors == 3):
+          born = 1
+        nxt[y * grid + x] = born
+        x = x + 1
+      y = y + 1
+    swap_grid = current
+    current = nxt
+    nxt = swap_grid
+    step = step + 1
+  checksum = 0
+  index = 0
+  while index < cells:
+    checksum = checksum + current[index] * (index + 1)
+    index = index + 1
+  checksum
+
 workload: "{{WORKLOAD}}"
 size: {{SIZE}}
 iterations: {{ITERATIONS}}
@@ -366,6 +586,18 @@ while iteration_index < iterations:
     total = total + run_stencil(size)
   if workload == "histogram":
     total = total + run_histogram(size)
+  if workload == "dijkstra":
+    total = total + run_dijkstra(size)
+  if workload == "floyd":
+    total = total + run_floyd(size)
+  if workload == "knapsack":
+    total = total + run_knapsack(size)
+  if workload == "editdist":
+    total = total + run_editdist(size)
+  if workload == "lis":
+    total = total + run_lis(size)
+  if workload == "life":
+    total = total + run_life(size)
   iteration_index = iteration_index + 1
 elapsed_ms = (perf() - started_at) * 1000.0
 print("CHECKSUM:" + str(total))
