@@ -1,7 +1,12 @@
+"""Archived swarm-tier experiment.
+
+This is not the cross-language ranking. That ranking is docs/MEASURED_PERFORMANCE.md.
 """
-Benchmark Comparison:
-Soma V1 Flat Swarm vs Soma V2 Hierarchical Swarm (Master -> Workers -> Micro-Assistants)
-"""
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 import time
 from swarm_v2_hierarchical import HierarchicalSwarmEngineV2
 

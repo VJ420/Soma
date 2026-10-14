@@ -15,6 +15,6 @@ The harness:
 python benchmarks/extreme/run_benchmarks.py --output benchmarks/extreme/results
 ```
 
-The published run is GitHub Actions run 38512994105 on an AMD EPYC 7763. A later run on a different processor is a new measurement. Do not average it with this one.
+The published run is GitHub Actions run [38517496358](https://github.com/VJ420/Soma/actions/runs/38517496358), commit `468ec56`, on an AMD EPYC 9V45, 14 Oct 2026. It covers 17 tasks. An earlier 11-task run, [38512994105](https://github.com/VJ420/Soma/actions/runs/38512994105), was an AMD EPYC 7763 and measured 0.69×. A later run on a different processor is a new measurement. Compare rows inside one run.
 
-`benchmarks/cross_domain_benchmark.py` and `benchmarks/hard_math_benchmark.py` time Python and JavaScript only. They are not a Soma-versus-Rust result. `benchmark.py` times the in-process interpreter against the bytecode machine on one loop. It is not the cross-language ranking.
+`benchmarks/archive/` holds older local probes. They time Python, JavaScript, the interpreter, or the swarm. They are not the ranking. The ranking is only the extreme suite.

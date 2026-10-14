@@ -23,8 +23,22 @@ Created by **[Vighnesh Jha](https://github.com/VJ420)** ([@VJ420](https://github
 
 </div>
 
+## If you just arrived
+
+Soma is one language. A value, a function, and an object are the same kind of cell. There is no `self`, no `class`, and no `return`: the tail expression is the result.
+
+```soma
+square(x): x * x
+5 -> square -> print
+```
+
+`soma run file.sm` compiles that file to C++ when `g++` or `clang++` is installed, and runs it on Node otherwise.
+
+On the published run Soma was first of six languages. Geometric-mean kernel time was **0.84×** the fastest other language across 17 tasks, and all 17 checksums matched. The machine was an AMD EPYC 9V45 on 14 Oct 2026. The full table is [docs/MEASURED_PERFORMANCE.md](docs/MEASURED_PERFORMANCE.md). The task list, the cold-start times, and where Soma still trails are on that page.
+
 ## Table of Contents
 
+- [If you just arrived](#if-you-just-arrived)
 - [Why Soma?](#why-soma)
 - [The Architectural Axiom: The Universal Cell](#the-architectural-axiom-the-universal-cell)
 - [Key Features](#key-features)
@@ -288,65 +302,47 @@ The sandbox is opt-in. `python soma_cli.py run file.sm --sandbox` loads `Securit
 
 ## Project Architecture
 
+These are the paths a visitor needs. The other files implement them.
+
+| Path | What it is |
+|---|---|
+| `soma_cli.py` | The command. `soma run`, `soma repl`, `soma swarm`, `soma --check`. |
+| `aot_engine/native_compiler.py` | The measured engine. Soma cells lowered to C++. |
+| `examples/` | Programs you can run. `.sm` is the usual extension. `.fc` still loads. |
+| `benchmarks/extreme/` | The only cross-language ranking. Report: `benchmarks/extreme/REPORT.md`. |
+| `docs/` | Specification, the measured table, how the compiler lowers code, the standard library, and the benchmark rules. |
+| `std/` | `math`, `array`, and `string`. |
+| `benchmarks/archive/` | Older local probes. They are not the ranking. |
+
 ```
 soma-lang/
-├── ast_nodes.py              # Slotted, frozen AST dataclass nodes
-├── lexer.py                  # Indentation-aware lexer (INDENT/DEDENT/NEWLINE)
-├── parser.py                 # Recursive descent parser with pattern matching
-├── bytecode.py               # VM Bytecode instruction set and constants
-├── compiler.py               # AST to Bytecode compiler
-├── vm.py                     # Stack-based Virtual Machine execution engine
-├── transpiler_js.py          # Soma to JavaScript, used when no C++ compiler exists
-├── transpiler_cpp.py         # Older C++ emitter, not the measured engine
-├── soma_cli.py               # Command-line interface (`soma` on PATH after install)
-├── swarm_core.py             # Agent swarm execution
-├── agentic_infra.py          # Swarm goal decomposition
-│
-├── aot_engine/
-│   └── native_compiler.py   # Soma cells to C++. This is the measured engine.
-│
-├── concurrency/
-│   └── circuit_breaker.py   # Circuit breaker state machine (CLOSED/OPEN/HALF_OPEN)
-│
-├── config/
-│   └── settings.py          # Typed configuration subsystem (Zero magic numbers)
-│
+├── soma_cli.py                 # CLI. fractal_cli.py and nexa_cli.py forward here
+├── lexer.py                    # Indentation-aware lexer
+├── parser.py                   # Parser, including match and pipelines
+├── ast_nodes.py                # AST
+├── aot_engine/native_compiler.py
+├── transpiler_js.py            # V8 fallback
+├── runtime.py                  # In-process interpreter entry used by the CLI
+├── runtime_engine/enterprise_interpreter.py
+├── compiler.py                 # Bytecode compiler
+├── bytecode.py
+├── vm.py                       # Bytecode machine
+├── transpiler_cpp.py           # Older C++ emitter. The measured engine is native_compiler.py
+├── typing_engine/type_system.py
+├── security/sandbox.py
+├── swarm_core.py               # Thread-pool swarm
+├── swarm_v2_hierarchical.py
+├── agentic_infra.py
+├── concurrency/circuit_breaker.py
+├── telemetry/logger.py
+├── config/settings.py
 ├── core/
-│   ├── container.py         # IoC / Dependency Injection Container
-│   └── interfaces.py        # Abstract execution strategies & contracts
-│
-├── runtime_engine/
-│   └── enterprise_interpreter.py # Enterprise slotted interpreter strategy
-│
-├── security/
-│   └── sandbox.py           # Capability-based security sandbox policy engine
-│
-├── telemetry/
-│   └── logger.py            # Asynchronous non-blocking structured JSON logger
-│
-├── typing_engine/
-│   └── type_system.py       # Bidirectional Hindley-Milner type inference
-│
-├── std/                     # Standard Library
-│   ├── math.fc              # Math kernels, constants, and trigonometry
-│   ├── array.fc             # High-throughput array transformations
-│   └── string.fc            # Fast string manipulation & formatting
-│
-├── examples/                # Production code samples (.sm)
-│   ├── 01_hello_cells.sm
-│   ├── 02_oop_without_boilerplate.sm
-│   ├── 03_pipeline_and_match.sm
-│   ├── 04_mandelbrot_extreme.sm
-│   └── 05_parallel_agent_swarm.sm
-│
-├── benchmarks/extreme/      # The cross-language suite and its published report
-│
+├── std/                        # math.fc, array.fc, string.fc
+├── examples/                   # 01–05 .sm, plus the longer .fc demos
+├── benchmarks/extreme/         # The ranking
+├── benchmarks/archive/         # Older probes
+├── tests/
 └── docs/
-    ├── SPECIFICATION.md
-    ├── MEASURED_PERFORMANCE.md
-    ├── PERFORMANCE_ENGINEERING.md
-    ├── STDLIB_REFERENCE.md
-    └── BENCHMARK_METHODOLOGY.md
 ```
 
 ---
@@ -410,7 +406,7 @@ python soma_cli.py repl
 python -m unittest discover tests
 ```
 
-The cross-language ranking is the extreme suite, not `benchmarks/cross_domain_benchmark.py`:
+The cross-language ranking is `benchmarks/extreme/`. Scripts in `benchmarks/archive/` are older local probes.
 
 ```bash
 python benchmarks/extreme/run_benchmarks.py --output benchmarks/extreme/results
@@ -425,6 +421,7 @@ python benchmarks/extreme/run_benchmarks.py --output benchmarks/extreme/results
 - [**Performance engineering (`docs/PERFORMANCE_ENGINEERING.md`)**](docs/PERFORMANCE_ENGINEERING.md): Integer width, the separable product, the odd sieve, and the arena.
 - [**Standard Library Reference (`docs/STDLIB_REFERENCE.md`)**](docs/STDLIB_REFERENCE.md): `std/math.fc`, `std/array.fc`, and `std/string.fc`.
 - [**Benchmark methodology (`docs/BENCHMARK_METHODOLOGY.md`)**](docs/BENCHMARK_METHODOLOGY.md): Checksums, clocks, and what is not a ranking.
+- [**What changed (`CHANGELOG.md`)**](CHANGELOG.md): The native compiler, the two measured runs, and how the repository is laid out.
 
 ---
 

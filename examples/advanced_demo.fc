@@ -27,7 +27,7 @@ spawn:
   print("[Worker] Running in background fiber...")
   sleep(0.05)
   print("[Worker] Sending secret payload to channel...")
-  "Fractal-Super-Payload-42" -> ch.send
+  "Soma-Payload-42" -> ch.send
 
 print("[Main] Waiting for message from worker...")
 received: ch.recv()

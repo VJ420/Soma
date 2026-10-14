@@ -1,4 +1,4 @@
-# Small math module imported by main_app.fc
+# Small math module imported by examples/main_app.fc
 pi: 3.1415926535
 
 cube(x):

@@ -1,4 +1,5 @@
-"""
+"""Archived local probe. The published ranking is docs/MEASURED_PERFORMANCE.md.
+
 Full End-to-End Multi-Language Benchmark Suite.
 Compares Python 3.12 (Sequential & Multi-Core), Node.js V8, and Fractal's Parallel Swarm Core.
 """
@@ -8,7 +9,7 @@ import json
 import sys
 import os
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from swarm_core import BlazingSwarmEngine
 
 TOTAL_ITEMS = 5_000_000  # 5 Million items to stress CPU cores

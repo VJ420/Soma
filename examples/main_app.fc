@@ -1,5 +1,6 @@
-# Multi-file Soma program. Run from the repository root.
-use "./math_lib.fc" as math
+# Multi-file Soma program. Run from the repository root:
+#   python soma_cli.py run examples/main_app.fc
+use "./examples/math_lib.fc" as math
 
 print("Imported math_lib successfully!")
 print("Math Pi:", math.pi)

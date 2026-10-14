@@ -1,4 +1,5 @@
-"""
+"""Archived local probe. The published ranking is docs/MEASURED_PERFORMANCE.md.
+
 Ultra-Hard Mathematical Benchmark Harness: Multi-Tier Language Comparison.
 Tests 7 extreme mathematical workloads:
 1. N-Queens Combinatorial Backtracking (n=12, NP-hard search space)
@@ -388,11 +389,11 @@ console.log((t1 - t0).toFixed(2));
     results["n_body"] = {"py": t_py_nb, "fractal_jit": t_fc_nb}
     print(f"      Python: {t_py_nb:7.2f} ms | JavaScript: {t_fc_nb:7.2f} ms")
 
-    with open("benchmarks/hard_math_results.json", "w", encoding="utf-8") as f:
+    with open("benchmarks/archive/hard_math_results.json", "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
     print("=" * 88)
-    print("      BENCHMARK COMPLETE - RESULTS PERSISTED TO benchmarks/hard_math_results.json")
+    print("      BENCHMARK COMPLETE - RESULTS PERSISTED TO benchmarks/archive/hard_math_results.json")
     print("=" * 88)
 
 if __name__ == "__main__":

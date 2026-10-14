@@ -1,4 +1,5 @@
-"""
+"""Archived local probe. The published ranking is docs/MEASURED_PERFORMANCE.md.
+
 Comprehensive Cross-Language Benchmark Suite.
 Compares Fractal against Python 3.12 and Node.js V8 across execution speed,
 compilation latency, memory/stack efficiency, and code verbosity.
@@ -9,7 +10,7 @@ import os
 import sys
 
 # Ensure parent directory is importable
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from lexer import Lexer
 from parser import Parser

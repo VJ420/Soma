@@ -1,5 +1,5 @@
 # Soma Language Specification & Architecture Standard
-**Version:** 2.0.0-LTS  
+**Version:** 2.1.0  
 **Conceived and Crafted in India**  
 Created & Designed by **[Vighnesh Jha](https://github.com/VJ420)** ([@VJ420](https://github.com/VJ420))  
 **Core Axiom:** *The Universal Cell — Infinite Depth from a Single Rule*
