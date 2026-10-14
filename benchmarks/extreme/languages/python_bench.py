@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import sys
+import time
 
 
 def nqueens(n: int) -> int:
@@ -149,9 +150,12 @@ WORKLOADS = {
 def main() -> None:
     workload, size_text, iterations_text = sys.argv[1:4]
     total = 0.0
+    started = time.perf_counter()
     for _ in range(int(iterations_text)):
         total += float(WORKLOADS[workload](int(size_text)))
+    elapsed_ms = (time.perf_counter() - started) * 1000.0
     print(f"CHECKSUM:{total:.9f}")
+    print(f"ELAPSED_MS:{elapsed_ms:.9f}")
 
 
 if __name__ == "__main__":

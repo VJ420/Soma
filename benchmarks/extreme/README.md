@@ -8,15 +8,17 @@ hardcoded reference numbers with measurements produced on one machine.
 
 - Seven deterministic workloads spanning factorial/exponential, cubic,
   quadratic, and near-linear complexity classes.
-- End-to-end elapsed time, including CLI and runtime startup.
+- Internally timed kernel execution plus end-to-end elapsed time.
 - Zero-iteration cold start, build/transpile cost, source or artifact size,
   and peak resident memory on Linux.
 - Three input sizes for empirical complexity fitting.
 - Three independent process samples after one warm-up.
 
-Every implementation prints a checksum. A timing is discarded if it times out,
-crashes, or disagrees with the Python reference (with a tight tolerance for the
-floating-point N-body simulation).
+Every implementation prints a checksum and internally measured kernel time.
+A timing is discarded if it times out, crashes, or disagrees with the Python
+reference (with a tight tolerance for the floating-point N-body simulation).
+Fast runtimes execute more inner iterations so timer resolution and process
+startup do not dominate their kernel measurements.
 
 ## Reproduce
 

@@ -191,6 +191,7 @@ size: {{SIZE}}
 iterations: {{ITERATIONS}}
 total = 0.0
 iteration_index = 0
+started_at: time()
 while iteration_index < iterations:
   if workload == "nqueens":
     total = total + run_nqueens(size)
@@ -207,4 +208,6 @@ while iteration_index < iterations:
   if workload == "binarytrees":
     total = total + run_binarytrees(size)
   iteration_index = iteration_index + 1
+elapsed_ms = (time() - started_at) * 1000.0
 print("CHECKSUM:" + str(total))
+print("ELAPSED_MS:" + str(elapsed_ms))

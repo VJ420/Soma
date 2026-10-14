@@ -1,5 +1,7 @@
 "use strict";
 
+const { performance } = require("perf_hooks");
+
 function nqueens(n) {
   const columns = new Int32Array(n);
   function safe(row, column) {
@@ -140,7 +142,10 @@ function binarytrees(depth) {
 const workloads = { nqueens, mandelbrot, matmul, lcs, sieve, nbody, binarytrees };
 const [workload, sizeText, iterationsText] = process.argv.slice(2);
 let total = 0.0;
+const started = performance.now();
 for (let iteration = 0; iteration < Number(iterationsText); iteration++) {
   total += workloads[workload](Number(sizeText));
 }
+const elapsedMs = performance.now() - started;
 console.log(`CHECKSUM:${total.toFixed(9)}`);
+console.log(`ELAPSED_MS:${elapsedMs.toFixed(9)}`);

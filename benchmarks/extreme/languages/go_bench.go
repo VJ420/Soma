@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"time"
 )
 
 func nqueens(n int) float64 {
@@ -150,6 +151,9 @@ func main() {
 		"lcs": lcs, "sieve": sieve, "nbody": nbody, "binarytrees": binarytrees,
 	}
 	total := 0.0
+	started := time.Now()
 	for i := 0; i < iterations; i++ { total += functions[workload](size) }
+	elapsedMs := float64(time.Since(started).Nanoseconds()) / 1_000_000.0
 	fmt.Printf("CHECKSUM:%.9f\n", total)
+	fmt.Printf("ELAPSED_MS:%.9f\n", elapsedMs)
 }

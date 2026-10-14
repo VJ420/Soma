@@ -164,8 +164,8 @@ def generate_report(data: dict[str, Any]) -> str:
             "",
             "## Largest-input timings",
             "",
-            "| Workload | Runtime | Size | Median per iteration (ms) | p95 (ms) | Peak RSS (MiB) |",
-            "|---|---|---:|---:|---:|---:|",
+            "| Workload | Runtime | Size | Kernel median/iteration (ms) | Kernel p95 (ms) | End-to-end median/iteration (ms) | Peak RSS (MiB) |",
+            "|---|---|---:|---:|---:|---:|---:|",
         ]
     )
     largest_size = {
@@ -179,6 +179,7 @@ def generate_report(data: dict[str, Any]) -> str:
                 f"| {row['workload']} | {row['runtime']} | {row['size']} | "
                 f"{_fmt(row['median_per_iteration_ms'], 3)} | "
                 f"{_fmt(row['p95_per_iteration_ms'], 3)} | "
+                f"{_fmt(row['median_e2e_per_iteration_ms'], 3)} | "
                 f"{_fmt(rss / 1024 if rss is not None else None)} |"
             )
 
@@ -228,8 +229,8 @@ def generate_report(data: dict[str, Any]) -> str:
             "",
             "## Interpretation and limitations",
             "",
-            "- Each result includes process startup and backend startup, then divides by the configured inner iterations. "
-            "This is an end-to-end CLI comparison, not a microarchitectural kernel-only benchmark.",
+            "- Kernel timings come from clocks inside each program and exclude process startup. End-to-end and zero-iteration "
+            "cold-start timings are reported separately.",
             "- Python, JavaScript, Go, Rust, and C++ implementations use equivalent algorithms, but their container representations "
             "follow normal language idioms; this is more realistic than forcing identical low-level layouts.",
             "- Soma JIT means Soma source translated by `transpiler_js.py` and executed by Node/V8. Raw JavaScript is reported separately.",

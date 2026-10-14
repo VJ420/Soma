@@ -1,4 +1,5 @@
 use std::env;
+use std::time::Instant;
 
 fn nqueens(n: usize) -> f64 {
     fn safe(columns: &[usize], row: usize, column: usize) -> bool {
@@ -165,6 +166,9 @@ fn main() {
         "binarytrees" => binarytrees,
         _ => panic!("unknown workload"),
     };
+    let started = Instant::now();
     let total: f64 = (0..iterations).map(|_| function(size)).sum();
+    let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
     println!("CHECKSUM:{total:.9}");
+    println!("ELAPSED_MS:{elapsed_ms:.9}");
 }

@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 LANGUAGES = HERE / "languages"
 CHECKSUM_RE = re.compile(r"CHECKSUM:([-+0-9.eE]+)")
+ELAPSED_RE = re.compile(r"ELAPSED_MS:([-+0-9.eE]+)")
 RSS_RE = re.compile(r"__MAX_RSS_KB:(\d+)")
 
 
@@ -194,6 +195,11 @@ def parse_checksum(output: str) -> float | None:
     return float(matches[-1]) if matches else None
 
 
+def parse_elapsed_ms(output: str) -> float | None:
+    matches = ELAPSED_RE.findall(output)
+    return float(matches[-1]) if matches else None
+
+
 def checksums_match(workload: str, expected: float, actual: float) -> bool:
     if workload == "nbody":
         return math.isclose(expected, actual, rel_tol=1e-8, abs_tol=1e-7)
@@ -231,7 +237,16 @@ def main() -> None:
     manifest = json.loads((HERE / "manifest.json").read_text(encoding="utf-8"))
     repetitions = args.repetitions or manifest["repetitions"]
     timeout = manifest["timeout_seconds"]
-    inner_iterations = 1
+    runtime_iterations = {
+        "Python": 10,
+        "JavaScript": 20,
+        "Go": 100,
+        "Rust": 100,
+        "C++": 100,
+        "Soma interpreter": 1,
+        "Soma JIT": 10,
+        "Soma VM": 1,
+    }
     output_dir = args.output.resolve()
     build_dir = output_dir / "build"
     generated_dir = output_dir / "generated"
@@ -332,28 +347,16 @@ def main() -> None:
         spec = manifest["workloads"][workload]
         sizes = spec["sizes"][: args.max_sizes] if args.max_sizes else spec["sizes"]
         for size in sizes:
-            expected_command = commands["Python"](workload, size, inner_iterations, None)
+            expected_command = commands["Python"](workload, size, 1, None)
             expected_result = run_process(expected_command, timeout)
-            expected = parse_checksum(expected_result["stdout"])
-            if expected_result["status"] != "ok" or expected is None:
+            unit_checksum = parse_checksum(expected_result["stdout"])
+            if expected_result["status"] != "ok" or unit_checksum is None:
                 raise RuntimeError(
                     f"Reference failed for {workload}/{size}: {expected_result}"
                 )
-            soma_path = render_soma(
-                template, generated_dir, workload, size, inner_iterations
-            )
-            soma_vm_path = render_soma(
-                vm_template,
-                generated_dir,
-                f"{workload}_vm",
-                size,
-                inner_iterations,
-            )
-            soma_vm_source = soma_vm_path.read_text(encoding="utf-8").replace(
-                f'workload: "{workload}_vm"', f'workload: "{workload}"'
-            )
-            soma_vm_path.write_text(soma_vm_source, encoding="utf-8")
             for runtime in selected_runtimes:
+                inner_iterations = runtime_iterations[runtime]
+                expected = unit_checksum * inner_iterations
                 base = {
                     "runtime": runtime,
                     "workload": workload,
@@ -381,15 +384,30 @@ def main() -> None:
                         }
                     )
                     continue
-                runtime_soma_path = soma_vm_path if runtime == "Soma VM" else soma_path
+                runtime_slug = runtime.lower().replace(" ", "_").replace("+", "p")
+                rendered_workload = f"{workload}_{runtime_slug}"
+                source_template = vm_template if runtime == "Soma VM" else template
+                runtime_soma_path = render_soma(
+                    source_template,
+                    generated_dir,
+                    rendered_workload,
+                    size,
+                    inner_iterations,
+                )
+                soma_source = runtime_soma_path.read_text(encoding="utf-8").replace(
+                    f'workload: "{rendered_workload}"', f'workload: "{workload}"'
+                )
+                runtime_soma_path.write_text(soma_source, encoding="utf-8")
                 command = commands[runtime](
                     workload, size, inner_iterations, runtime_soma_path
                 )
                 warmup = run_process(command, timeout)
                 warmup_checksum = parse_checksum(warmup["stdout"])
+                warmup_elapsed = parse_elapsed_ms(warmup["stdout"])
                 if (
                     warmup["status"] != "ok"
                     or warmup_checksum is None
+                    or warmup_elapsed is None
                     or not checksums_match(workload, expected, warmup_checksum)
                 ):
                     measurements.append(
@@ -405,14 +423,17 @@ def main() -> None:
                     )
                     continue
                 samples = []
+                kernel_samples = []
                 rss_samples = []
                 failure = None
                 for _ in range(repetitions):
                     result = run_process(command, timeout)
                     checksum = parse_checksum(result["stdout"])
+                    elapsed_ms = parse_elapsed_ms(result["stdout"])
                     if (
                         result["status"] != "ok"
                         or checksum is None
+                        or elapsed_ms is None
                         or not checksums_match(workload, expected, checksum)
                     ):
                         failure = (
@@ -421,31 +442,36 @@ def main() -> None:
                         )
                         break
                     samples.append(result["duration_ms"])
+                    kernel_samples.append(elapsed_ms)
                     if result["peak_rss_kb"] is not None:
                         rss_samples.append(result["peak_rss_kb"])
                 if failure:
                     measurements.append({**base, "status": "failed", "reason": failure})
                     continue
                 median = statistics.median(samples)
+                kernel_median = statistics.median(kernel_samples)
                 measurements.append(
                     {
                         **base,
                         "status": "ok",
                         "checksum": warmup_checksum,
                         "samples_ms": samples,
+                        "kernel_samples_ms": kernel_samples,
                         "median_ms": median,
                         "p95_ms": percentile95(samples),
                         "mad_ms": statistics.median(
                             [abs(value - median) for value in samples]
                         ),
-                        "median_per_iteration_ms": median / inner_iterations,
-                        "p95_per_iteration_ms": percentile95(samples) / inner_iterations,
+                        "median_per_iteration_ms": kernel_median / inner_iterations,
+                        "p95_per_iteration_ms": percentile95(kernel_samples)
+                        / inner_iterations,
+                        "median_e2e_per_iteration_ms": median / inner_iterations,
                         "peak_rss_kb": max(rss_samples) if rss_samples else None,
                     }
                 )
                 print(
                     f"{runtime:18} {workload:12} n={size:<6} "
-                    f"{median / inner_iterations:10.3f} ms/iteration"
+                    f"{kernel_median / inner_iterations:10.3f} ms/iteration"
                 )
 
     versions = {
@@ -465,7 +491,7 @@ def main() -> None:
             "logical_cpus": os.cpu_count(),
             "versions": versions,
             "repetitions": repetitions,
-            "inner_iterations": inner_iterations,
+            "runtime_iterations": runtime_iterations,
             "timeout_seconds": timeout,
         },
         "manifest": manifest,

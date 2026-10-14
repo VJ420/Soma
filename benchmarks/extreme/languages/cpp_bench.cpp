@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -167,6 +168,11 @@ int main(int argc, char** argv) {
     }
     if (!function) return 3;
     double total = 0.0;
+    const auto started = std::chrono::steady_clock::now();
     for (int iteration = 0; iteration < iterations; ++iteration) total += function(size);
+    const double elapsed_ms = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - started
+    ).count();
     std::cout << "CHECKSUM:" << std::fixed << std::setprecision(9) << total << '\n';
+    std::cout << "ELAPSED_MS:" << elapsed_ms << '\n';
 }
