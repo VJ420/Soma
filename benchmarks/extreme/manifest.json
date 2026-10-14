@@ -1,9 +1,10 @@
 {
   "schema_version": 1,
-  "profile": "deep",
+  "profile": "native-deep",
   "warmups": 1,
   "repetitions": 3,
   "timeout_seconds": 180,
+  "runtimes": ["Python", "JavaScript", "Go", "Rust", "C++", "Soma"],
   "workloads": {
     "nqueens": {
       "domain": "Combinatorial search",
@@ -52,6 +53,34 @@
       "sizes": [10, 13, 15],
       "expected_time": "O(2^n)",
       "expected_space": "O(2^n)",
+      "soma_vm": true
+    },
+    "bfs": {
+      "domain": "Graph traversal",
+      "sizes": [8000, 30000, 80000],
+      "expected_time": "O(n)",
+      "expected_space": "O(n)",
+      "soma_vm": true
+    },
+    "sort": {
+      "domain": "Comparison sorting",
+      "sizes": [8000, 20000, 50000],
+      "expected_time": "O(n log n)",
+      "expected_space": "O(n)",
+      "soma_vm": true
+    },
+    "stencil": {
+      "domain": "Grid memory traffic",
+      "sizes": [32, 64, 96],
+      "expected_time": "O(n^2)",
+      "expected_space": "O(n^2)",
+      "soma_vm": true
+    },
+    "histogram": {
+      "domain": "Random-access counting",
+      "sizes": [200000, 600000, 1000000],
+      "expected_time": "O(n)",
+      "expected_space": "O(1)",
       "soma_vm": true
     }
   }

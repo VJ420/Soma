@@ -93,48 +93,14 @@ def _soma_ratio_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _recommendations(data: dict[str, Any]) -> list[str]:
-    largest = _largest_ok(data)
-    interpreter = [
-        row for (runtime, _), row in largest.items() if runtime == "Soma interpreter"
-    ]
-    python = {workload: row for (runtime, workload), row in largest.items() if runtime == "Python"}
-    native = [
-        row
-        for (runtime, _), row in largest.items()
-        if runtime in {"C++", "Rust"}
-    ]
-    vs_python = []
-    for row in interpreter:
-        if row["workload"] in python:
-            vs_python.append(
-                row["median_per_iteration_ms"] / python[row["workload"]]["median_per_iteration_ms"]
-            )
-    unsupported = [
-        row
-        for row in data["measurements"]
-        if row["status"] == "unsupported" and row["runtime"] == "Soma VM"
-    ]
-    reasons = sorted({row.get("reason", "") for row in unsupported if row.get("reason")})
+    failed = [row for row in data["measurements"] if row["status"] != "ok"]
     items = [
-        "Ship index get/set in `compiler.py` / `vm.py`. That single gap blocked N-Queens, LCS, sieve, and N-body on the VM path in this run.",
-        "Replace AST walking in the default interpreter with bytecode execution for `soma_cli.py run`. The interpreter completed every workload but sat thousands of times behind native code and more than a hundred times behind CPython on the same algorithms.",
-        "Make the JS transpiler emit packed numeric loops (typed arrays, fewer object allocations) so Soma JIT can close the remaining gap to handwritten JavaScript.",
-        "Implement nested callable cells on VM instances so allocation/recursion workloads like binary trees are not unsupported.",
-        "Expose a high-resolution clock builtin. Soma kernels currently time with `time()`, which quantizes sub-millisecond JIT loops and flattens empirical exponents.",
-        "Cut CLI/transpile startup. Zero-iteration Soma JIT and interpreter launches were tens of milliseconds; compiled Go/Rust/C++ binaries were about 1–2 ms.",
+        "Soma in this run is the native cell lowering: int64 and double monomorphization, contiguous vectors, bit-packed boolean arrays, arena-allocated object cells, counted loops emitted as for-loops, and pipelines lowered to direct calls.",
+        "C++, Rust, and Go were compiled for the host CPU, and Soma was compiled with the same class of flags. A ratio below 1.0 means Soma took less kernel time than that language.",
     ]
-    if vs_python:
-        items[1] = (
-            f"Replace AST walking in the default interpreter with bytecode execution for `soma_cli.py run`. "
-            f"On matching largest inputs the interpreter was {geometric_mean(vs_python):.0f}× slower than CPython."
-        )
-    if not reasons:
-        items[0] = (
-            "Keep VM and interpreter backend coverage aligned. Unsupported pairs should stay explicit failures, not silent skips."
-        )
-    if not native:
+    if failed:
         items.append(
-            "Re-run the GitHub Actions workflow whenever Go, Rust, or C++ numbers are needed; those toolchains are not assumed locally."
+            f"{len(failed)} workload rows failed checksum, compilation, or the time limit. Those rows are not scores."
         )
     return items
 
@@ -200,6 +166,12 @@ def generate_report(data: dict[str, Any]) -> str:
         f"Generated: `{data['metadata']['timestamp_utc']}`  ",
         f"Commit: `{data['metadata'].get('commit', 'unknown')}`  ",
         f"Runner: `{data['metadata']['platform']}` · `{data['metadata'].get('cpu', 'unknown CPU')}`",
+    ]
+    flags = data["metadata"].get("compile_flags") or {}
+    if flags:
+        rendered = ", ".join(f"{name} `{value}`" for name, value in flags.items())
+        lines.append(f"Host compilation: {rendered}")
+    lines.extend([
         "",
         "## Executive result",
         "",
@@ -217,7 +189,7 @@ def generate_report(data: dict[str, Any]) -> str:
         "",
         "| Runtime | Completed workloads | Geomean vs best competitor | Median peak RSS (MiB) |",
         "|---|---:|---:|---:|",
-    ]
+    ])
     for row in sorted(
         summary,
         key=lambda item: item["geomean_vs_best_competitor"]

@@ -1,8 +1,8 @@
 """Soma command line. One language, one command.
 
-`soma run file.sm` executes on V8 when Node.js is installed.
-`--engine interpreter` runs the in-process Soma interpreter.
-`--engine vm` runs Soma bytecode.
+`soma run file.sm` compiles to native code when g++ or clang++ is on PATH.
+Otherwise it runs on V8 when Node.js is installed.
+`--engine interpreter` walks the program in-process. `--engine vm` runs bytecode.
 """
 import argparse
 import json
@@ -10,11 +10,12 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 
 from lexer import Lexer
 from parser import Parser
 from transpiler_js import JsTranspiler, TranspileError
-from aot_engine.beast_compiler import BeastNativeCompiler
+from aot_engine.native_compiler import NativeCompiler, NativeCompileError
 from compiler import Compiler, CompileError
 from vm import FractalVM
 from core.container import FractalContainer
@@ -42,13 +43,42 @@ def read_program(path: str):
 def choose_engine(requested: str | None) -> str:
     if requested:
         return requested
+    if shutil.which("g++") or shutil.which("clang++"):
+        return "native"
     if shutil.which("node"):
         return "jit"
-    print("Node.js was not found. Running the Soma interpreter.", file=sys.stderr)
+    print("No C++ compiler or Node.js found. Running the Soma interpreter.", file=sys.stderr)
     return "interpreter"
 
 
+def execute_native(path: str) -> None:
+    compiler = shutil.which("g++") or shutil.which("clang++")
+    if compiler is None:
+        print("Soma native engine needs g++ or clang++ on PATH.", file=sys.stderr)
+        raise SystemExit(2)
+    cpp = NativeCompiler().compile_program(read_program(path))
+    work = tempfile.mkdtemp(prefix="soma-native-")
+    cpp_path = os.path.join(work, "program.cpp")
+    binary = os.path.join(work, "program.exe" if os.name == "nt" else "program")
+    with open(cpp_path, "w", encoding="utf-8") as handle:
+        handle.write(cpp)
+    built = subprocess.run(
+        [compiler, "-O3", "-std=c++20", "-march=native", "-o", binary, cpp_path],
+        capture_output=True,
+        text=True,
+    )
+    if built.returncode != 0:
+        print(built.stderr or built.stdout, file=sys.stderr)
+        raise SystemExit(built.returncode or 1)
+    completed = subprocess.run([binary])
+    if completed.returncode != 0:
+        raise SystemExit(completed.returncode)
+
+
 def execute(path: str, engine: str, container: FractalContainer) -> None:
+    if engine == "native":
+        execute_native(path)
+        return
     ast = read_program(path)
     if engine == "jit":
         javascript = JsTranspiler(base_dir=os.path.dirname(os.path.abspath(path)) or ".").transpile(ast)
@@ -98,7 +128,7 @@ def main() -> None:
 
     run_parser = subparsers.add_parser("run", help="Run a .sm or .fc program")
     run_parser.add_argument("file")
-    run_parser.add_argument("--engine", choices=("jit", "interpreter", "vm"))
+    run_parser.add_argument("--engine", choices=("native", "jit", "interpreter", "vm"))
     run_parser.add_argument("--sandbox", action="store_true", help="Deny file and network access")
     run_parser.add_argument("--check", action="store_true", help="Print inferred types, then run")
 
@@ -142,7 +172,7 @@ def main() -> None:
         elif args.command == "dis":
             print(Compiler().compile(read_program(args.file)).disassemble(args.file))
         elif args.command == "emit-cpp":
-            cpp = BeastNativeCompiler().compile_to_native_cpp(read_program(args.file))
+            cpp = NativeCompiler().compile_program(read_program(args.file))
             _write_or_print(cpp, args.output, "C++")
         elif args.command == "emit-js":
             javascript = JsTranspiler(
@@ -159,7 +189,7 @@ def main() -> None:
             start_repl(container)
         else:
             parser.print_help()
-    except (CompileError, TranspileError) as error:
+    except (CompileError, TranspileError, NativeCompileError) as error:
         print(f"Error: {error}", file=sys.stderr)
         raise SystemExit(2)
     finally:

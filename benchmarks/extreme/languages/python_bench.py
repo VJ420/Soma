@@ -127,6 +127,97 @@ class Node:
         return 1 + self.left.check() + self.right.check()
 
 
+def bfs(node_count: int) -> int:
+    dist = [-1] * node_count
+    queue = [0] * node_count
+    dist[0] = 0
+    head = 0
+    tail = 1
+    while head < tail:
+        node = queue[head]
+        head += 1
+        first = (node + 1) % node_count
+        second = (node * 3 + 1) % node_count
+        if dist[first] < 0:
+            dist[first] = dist[node] + 1
+            queue[tail] = first
+            tail += 1
+        if first != second and dist[second] < 0:
+            dist[second] = dist[node] + 1
+            queue[tail] = second
+            tail += 1
+    return sum(value for value in dist if value >= 0)
+
+
+def mergesort(count: int) -> int:
+    state = 1
+    values = [0] * count
+    for index in range(count):
+        state = (state * 48271) % 2147483647
+        values[index] = state
+    aux = [0] * count
+    width = 1
+    while width < count:
+        start = 0
+        while start < count:
+            left = start
+            mid = min(start + width, count)
+            right = min(start + 2 * width, count)
+            left_index, right_index, write_index = left, mid, left
+            while left_index < mid and right_index < right:
+                if values[left_index] <= values[right_index]:
+                    aux[write_index] = values[left_index]
+                    left_index += 1
+                else:
+                    aux[write_index] = values[right_index]
+                    right_index += 1
+                write_index += 1
+            while left_index < mid:
+                aux[write_index] = values[left_index]
+                left_index += 1
+                write_index += 1
+            while right_index < right:
+                aux[write_index] = values[right_index]
+                right_index += 1
+                write_index += 1
+            for copy_index in range(left, right):
+                values[copy_index] = aux[copy_index]
+            start += 2 * width
+        width *= 2
+    checksum = 0
+    for index, value in enumerate(values):
+        checksum = (checksum + value * (index + 1)) % 1000000007
+    return checksum
+
+
+def stencil(grid: int) -> float:
+    cell_count = grid * grid
+    current = [0.0] * cell_count
+    nxt = [0.0] * cell_count
+    for diagonal in range(grid):
+        current[diagonal * grid + diagonal] = 1.0
+    for _ in range(12):
+        for y in range(grid):
+            for x in range(grid):
+                center = current[y * grid + x]
+                left = current[y * grid + (x - 1)] if x > 0 else center
+                right = current[y * grid + (x + 1)] if x + 1 < grid else center
+                up = current[(y - 1) * grid + x] if y > 0 else center
+                down = current[(y + 1) * grid + x] if y + 1 < grid else center
+                nxt[y * grid + x] = (center + left + right + up + down) / 5.0
+        current, nxt = nxt, current
+    return sum(value * (index + 1) for index, value in enumerate(current))
+
+
+def histogram(sample_count: int) -> int:
+    bins = [0] * 1024
+    state = 1
+    for _ in range(sample_count):
+        state = (state * 48271) % 2147483647
+        bins[state % 1024] += 1
+    return sum((index + 1) * count for index, count in enumerate(bins))
+
+
 def binarytrees(depth: int) -> int:
     def build(level: int) -> Node:
         if level <= 0:
@@ -144,6 +235,10 @@ WORKLOADS = {
     "sieve": sieve,
     "nbody": nbody,
     "binarytrees": binarytrees,
+    "bfs": bfs,
+    "sort": mergesort,
+    "stencil": stencil,
+    "histogram": histogram,
 }
 
 
