@@ -1,55 +1,55 @@
 {
   "schema_version": 1,
-  "profile": "quick",
+  "profile": "deep",
   "warmups": 1,
   "repetitions": 3,
-  "timeout_seconds": 90,
+  "timeout_seconds": 180,
   "workloads": {
     "nqueens": {
       "domain": "Combinatorial search",
-      "sizes": [7, 8, 9],
+      "sizes": [8, 9, 10],
       "expected_time": "O(n!)",
       "expected_space": "O(n)",
       "soma_vm": true
     },
     "mandelbrot": {
       "domain": "Complex dynamics",
-      "sizes": [40, 70, 100],
+      "sizes": [80, 140, 200],
       "expected_time": "O(n^2 * max_iter)",
       "expected_space": "O(1)",
       "soma_vm": true
     },
     "matmul": {
       "domain": "Integer linear algebra",
-      "sizes": [16, 24, 32],
+      "sizes": [32, 48, 64],
       "expected_time": "O(n^3)",
       "expected_space": "O(1)",
       "soma_vm": true
     },
     "lcs": {
       "domain": "Dynamic programming",
-      "sizes": [80, 160, 240],
+      "sizes": [200, 400, 600],
       "expected_time": "O(n^2)",
       "expected_space": "O(n)",
       "soma_vm": true
     },
     "sieve": {
       "domain": "Number theory",
-      "sizes": [2000, 6000, 12000],
+      "sizes": [50000, 200000, 500000],
       "expected_time": "O(n log log n)",
       "expected_space": "O(n)",
       "soma_vm": true
     },
     "nbody": {
       "domain": "Astrophysical simulation",
-      "sizes": [12, 20, 28],
+      "sizes": [32, 64, 96],
       "expected_time": "O(n^2)",
       "expected_space": "O(n)",
       "soma_vm": true
     },
     "binarytrees": {
       "domain": "Allocation and recursion",
-      "sizes": [7, 9, 11],
+      "sizes": [10, 13, 15],
       "expected_time": "O(2^n)",
       "expected_space": "O(2^n)",
       "soma_vm": true
