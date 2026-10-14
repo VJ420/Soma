@@ -1,6 +1,6 @@
-# 04_mandelbrot_extreme.fc
-# Mandelbrot Set Calculation: Pure computational intensity
-# Run with: python fractal_cli.py jit examples/04_mandelbrot_extreme.fc
+# 04_mandelbrot_extreme.sm
+# Mandelbrot escape count.
+# Run with: python soma_cli.py run examples/04_mandelbrot_extreme.sm
 
 compute_mandelbrot(w, h, max_iter):
     total = 0

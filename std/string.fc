@@ -1,4 +1,4 @@
-# Fractal Standard String Module (std/string.fc)
+# Soma standard strings (std/string.fc)
 
 join(lst, sep):
   if len(lst) == 0: ""

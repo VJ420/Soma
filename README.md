@@ -9,15 +9,15 @@ Created by **[Vighnesh Jha](https://github.com/VJ420)** ([@VJ420](https://github
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg?style=flat-square&logo=python&logoColor=white)](https://python.org)
-[![Build Status](https://img.shields.io/badge/Tests-24%20Passing-brightgreen.svg?style=flat-square)]()
+[![Build Status](https://img.shields.io/badge/Tests-unittest-brightgreen.svg?style=flat-square)]()
 [![Architecture](https://img.shields.io/badge/Architecture-Universal%20Cell-9cf.svg?style=flat-square)]()
-[![Execution](https://img.shields.io/badge/Execution-V8%20%2B%20interpreter%20%2B%20VM-orange.svg?style=flat-square)]()
+[![Execution](https://img.shields.io/badge/Execution-Native%20C%2B%2B%20when%20available-orange.svg?style=flat-square)]()
 
 <br/>
 
 > **"One Primitive. Zero Ceremony. One command."**  
 > Soma unifies variables, functions, objects, modules, and concurrent fibers into one construct: **The Universal Cell**.  
-> `soma run` executes that source on V8. The same file can run on the interpreter or the bytecode machine.
+> `soma run` compiles that source to native code when a C++ compiler is installed, and runs it on V8 otherwise. The same file can run on the interpreter or the bytecode machine.
 
 ---
 
@@ -56,7 +56,7 @@ This creates massive syntactic tax, repetitive boilerplate (`self`, `__init__`, 
 **Soma resolves this fragmentation through Recursive Modularity.**  
 The name **Soma** comes from the biological core—the cell body from which all living structures grow. In Soma, every single language element is an instance of one self-similar construct: **The Universal Cell**.
 
-You write concise domain code. `python soma_cli.py run file.sm` translates it to JavaScript and runs it on Node. `--engine interpreter` and `--engine vm` run the same source in-process.
+You write concise domain code. `python soma_cli.py run file.sm` compiles it with `g++` or `clang++` when one of those is on PATH. Otherwise it translates the same source to JavaScript and runs it on Node. `--engine interpreter` and `--engine vm` run it in-process.
 
 ---
 
@@ -114,13 +114,13 @@ route_status(code):
 ```
 
 ### 5. One language, one run command
-`soma run file.sm` executes the program on V8 when Node.js is installed. The same source can also run on the in-process interpreter (`--engine interpreter`) or the bytecode machine (`--engine vm`). C++ emission is a separate backend and is not a claim of beating Rust.
+`soma run file.sm` compiles to native code when `g++` or `clang++` is installed. The same source can also run on V8 (`--engine jit`), the in-process interpreter (`--engine interpreter`), or the bytecode machine (`--engine vm`). The measured ranking of that native path is in [docs/MEASURED_PERFORMANCE.md](docs/MEASURED_PERFORMANCE.md).
 
 ### 6. First-Class Autonomous Agent Swarms (SMAA-V2)
-Built-in 3-tier hierarchical decomposition (Master $\to$ Regional Workers $\to$ Micro-Assistants) across 16 concurrent leaf fibers without GIL bottlenecks.
+`soma swarm` splits a goal into a master cell, four worker cells, and sixteen assistant cells, then runs the leaves on Python threads.
 
 ### 7. Capability-Based Sandbox Security
-Deterministic runtime security policy engine that restricts filesystem, network, and subprocess access at the VM boundary.
+`soma run file.sm --sandbox` denies filesystem, network, and subprocess access. A normal run does not enable it.
 
 ### 8. Enterprise Fault Tolerance & Observability
 - Integrated **Circuit Breakers** (`CLOSED` $\to$ `OPEN` $\to$ `HALF_OPEN`) with automatic dead-letter failure isolation.
@@ -130,9 +130,20 @@ Deterministic runtime security policy engine that restricts filesystem, network,
 
 ## Measured performance
 
-Earlier tables that showed Soma beating Rust used numbers that were typed in, not measured. The current suite is `benchmarks/extreme/`. It runs the same algorithms in Soma, Python, JavaScript, Go, Rust, and C++, checks a checksum, and keeps only timings from that run.
+Older tables that showed Soma beating Rust were typed in. Those numbers are gone. The current suite is `benchmarks/extreme/`. It runs the same algorithms in Soma, Python, JavaScript, Go, Rust, and C++, checks a checksum, and keeps only timings from that run.
 
-On the measured run, Soma's V8 path is faster than CPython and slower than Go, Rust, and C++. The in-process interpreter is much slower than CPython. Reproduce with:
+On the published run (GitHub Actions 38512994105, commit `f9db3dc`, AMD EPYC 7763, 14 Oct 2026) the native Soma path was first of the six. Geometric-mean kernel time was **0.69×** the fastest other language, **0.63×** C++, and **0.59×** Rust. All 11 checksums matched. The task table, the cold-start times, and the explanation of the two compiler rewrites are in [docs/MEASURED_PERFORMANCE.md](docs/MEASURED_PERFORMANCE.md).
+
+| Place | Runtime | Geomean vs fastest other |
+|---|---|---:|
+| 1 | Soma native | 0.69× |
+| 2 | C++ | 1.08× |
+| 3 | Rust | 1.16× |
+| 4 | Go | 1.51× |
+| 5 | JavaScript | 3.28× |
+| 6 | Python | 59.95× |
+
+That ranking is one machine. Histogram, LCS, and N-queens still trail Rust on that run. Reproduce with:
 
 ```bash
 python benchmarks/extreme/run_benchmarks.py --output benchmarks/extreme/results
@@ -207,7 +218,7 @@ route_response(status):
 
 ## Unified Execution Pipeline
 
-Soma provides 4 seamless execution tiers for every stage of development and deployment:
+Soma has one syntax and four ways to run it. `soma run` picks the first one that the machine can build.
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -217,28 +228,27 @@ Soma provides 4 seamless execution tiers for every stage of development and depl
                             ▼
 ┌────────────────────────────────────────────────────────┐
 │             Indentation-Aware Lexer & Parser           │
-│        Slotted Frozen AST Nodes (@dataclass(slots))    │
-└───────────────┬─────────────────────────┬──────────────┘
-                │                         │
-                ▼                         ▼
-┌───────────────────────────────┐ ┌──────────────────────┐
-│  Tier 1: Interactive Engine   │ │  Tier 2: Bytecode VM │
-│  - Instant REPL & Debugging   │ │  - Compact OpCodes   │
-│  - Circuit-Breaker Guarded    │ │  - Stack Execution   │
-└───────────────────────────────┘ └──────────────────────┘
-                │                         │
-                ▼                         ▼
-┌───────────────────────────────┐ ┌──────────────────────┐
-│  Tier 3: V8 engine            │ │  Tier 4: C++ emitter │
-│  - soma run, via Node         │ │  - emits C++ source  │
-│  - same class as JavaScript   │ │  - compile it yourself│
-└───────────────────────────────┘ └──────────────────────┘
+└───────────────┬────────────────────┬───────────────────┘
+                │                    │
+                ▼                    ▼
+┌───────────────────────────┐ ┌──────────────────────────┐
+│  Native (default)         │ │  V8, if no C++ compiler  │
+│  Soma cells to C++        │ │  --engine jit            │
+│  g++ or clang++ -O3       │ │                          │
+└───────────────────────────┘ └──────────────────────────┘
+                │                    │
+                ▼                    ▼
+┌───────────────────────────┐ ┌──────────────────────────┐
+│  Interpreter              │ │  Bytecode machine        │
+│  --engine interpreter     │ │  --engine vm             │
+│  spawn, REPL, tracebacks  │ │  in-process              │
+└───────────────────────────┘ └──────────────────────────┘
 ```
 
-- **Tier 1: Interactive Engine**: Direct AST execution equipped with circuit breakers (`CLOSED` $\to$ `OPEN` $\to$ `HALF_OPEN`), recursion depth limiters, and real-time structured telemetry.
-- **Tier 2: Bytecode Virtual Machine**: Slotted variable indexing, constant pooling, and stack-frame dispatch for lightweight embedded execution.
-- **Tier 3: V8 engine**: `soma run` translates Soma to JavaScript and executes it with Node. This is the fast path. It is in the same performance class as JavaScript, not Rust.
-- **Tier 4: C++ emitter**: `soma emit-cpp` writes C++ source. A C++ compiler has to build that source before it can run. Emitting C++ is not itself a measured win over Rust.
+- **Native**: `aot_engine/native_compiler.py` lowers cells to C++ and `soma run` builds that with `-O3 -std=c++20 -march=native`. This is the engine in the measured ranking.
+- **V8**: `transpiler_js.py` emits JavaScript and Node runs it. This is the fallback when no C++ compiler is installed.
+- **Interpreter**: walks the AST in Python. The REPL uses it. `spawn` is defined here.
+- **Bytecode**: `compiler.py` and `vm.py` run a stack machine in Python.
 
 ---
 
@@ -259,10 +269,10 @@ Soma is engineered from first principles for hierarchical, autonomous agent syst
           └── Worker Cell 3 ──── [ Micro-Assistants 3.0 .. 3.3 ]
 ```
 
-- **Tier 1: Master Orchestrator Cell**: Ingests macro program intentions, calculates global load topology, and assigns regional chunks to Regional Worker Cells.
-- **Tier 2: Regional Worker Cells**: Act as autonomous partition supervisors, continuously monitoring latency and subdividing workloads into micro-slices for their dedicated assistants.
-- **Tier 3: Micro-Assistant Cells**: 16 concurrent leaf fibers executing lock-free vector kernels sized precisely to fit inside hardware CPU L1/L2 caches.
-- The swarm is a Python coordinator around Soma cells. It decomposes a goal and runs the leaves on threads. It is not a separate language.
+- **Master**: takes the goal and builds the worker tree.
+- **Workers**: four regional cells, each with four assistants.
+- **Assistants**: sixteen leaves, run with a thread pool.
+- The swarm is a Python coordinator. It is not a separate language, and it is not the ranking in [docs/MEASURED_PERFORMANCE.md](docs/MEASURED_PERFORMANCE.md).
 
 ```powershell
 python soma_cli.py swarm "Analyze 5M telemetry records concurrently"
@@ -286,14 +296,14 @@ soma-lang/
 ├── bytecode.py               # VM Bytecode instruction set and constants
 ├── compiler.py               # AST to Bytecode compiler
 ├── vm.py                     # Stack-based Virtual Machine execution engine
-├── transpiler_js.py          # High-velocity compiler engine
-├── transpiler_cpp.py         # Standard C++ emitter
-├── soma_cli.py               # Unified command-line interface
-├── swarm_core.py             # 3-Tier Autonomous agent swarm execution engine
-├── agentic_infra.py          # 3-Tier Swarm intention decomposition engine
+├── transpiler_js.py          # Soma to JavaScript, used when no C++ compiler exists
+├── transpiler_cpp.py         # Older C++ emitter, not the measured engine
+├── soma_cli.py               # Command-line interface (`soma` on PATH after install)
+├── swarm_core.py             # Agent swarm execution
+├── agentic_infra.py          # Swarm goal decomposition
 │
 ├── aot_engine/
-│   └── beast_compiler.py    # Native C++20 / SIMD AVX2 AOT compiler
+│   └── native_compiler.py   # Soma cells to C++. This is the measured engine.
 │
 ├── concurrency/
 │   └── circuit_breaker.py   # Circuit breaker state machine (CLOSED/OPEN/HALF_OPEN)
@@ -329,13 +339,11 @@ soma-lang/
 │   ├── 04_mandelbrot_extreme.sm
 │   └── 05_parallel_agent_swarm.sm
 │
-├── benchmarks/              # Empirical cross-domain benchmark suites
-│   ├── cross_domain_benchmark.py
-│   ├── hard_math_benchmark.py
-│   └── cross_domain_extreme_results.json
+├── benchmarks/extreme/      # The cross-language suite and its published report
 │
-└── docs/                    # Architectural documentation
+└── docs/
     ├── SPECIFICATION.md
+    ├── MEASURED_PERFORMANCE.md
     ├── PERFORMANCE_ENGINEERING.md
     ├── STDLIB_REFERENCE.md
     └── BENCHMARK_METHODOLOGY.md
@@ -346,9 +354,9 @@ soma-lang/
 ## Quickstart & Installation
 
 ### Prerequisites
-- **Python 3.12+** (Core runtime and CLI)
-- **Node.js 18+** (High-velocity execution engine)
-- *Optional:* Clang / GCC with C++20 support (Native SIMD compilation)
+- **Python 3.12+** (CLI, parser, and the in-process engines)
+- **g++ or clang++** with C++20 (the default `soma run` engine, and the measured one)
+- **Node.js 18+** (fallback when no C++ compiler is installed)
 
 ### Clone & Setup
 ```bash
@@ -366,22 +374,22 @@ python soma_cli.py run examples/01_hello_cells.sm
 ## Unified CLI Reference
 
 ```bash
-# 1. Run on V8. This is the normal command.
+# 1. Native when g++ or clang++ exists, otherwise V8.
 python soma_cli.py run examples/01_hello_cells.sm
 
-# 2. Same V8 path, explicit.
-python soma_cli.py jit examples/04_mandelbrot_extreme.sm
+# 2. Force V8.
+python soma_cli.py run examples/04_mandelbrot_extreme.sm --engine jit
 
-# 3. In-process interpreter. Required for spawn.
+# 3. In-process interpreter. The REPL uses this engine. spawn is defined here.
 python soma_cli.py run examples/01_hello_cells.sm --engine interpreter
 
 # 4. Bytecode machine.
 python soma_cli.py vm examples/01_hello_cells.sm
 
-# 5. Disassemble Code into Bytecode OpCodes
+# 5. Print bytecode.
 python soma_cli.py dis examples/01_hello_cells.sm
 
-# 6. Emit C++ source. A C++ compiler still has to build it.
+# 6. Emit the same C++ the native engine compiles, without running it.
 python soma_cli.py emit-cpp examples/04_mandelbrot_extreme.sm -o kernel.cpp
 
 # 7. Run the agent swarm
@@ -398,27 +406,25 @@ python soma_cli.py repl
 
 ## Verification & Quality Assurance
 
-Soma includes a comprehensive test suite covering all architectural subsystems:
-
 ```bash
 python -m unittest discover tests
 ```
 
-*Status: 24/24 tests passing.*
+The cross-language ranking is the extreme suite, not `benchmarks/cross_domain_benchmark.py`:
 
-To run the automated empirical benchmark matrix:
 ```bash
-python benchmarks/cross_domain_benchmark.py
+python benchmarks/extreme/run_benchmarks.py --output benchmarks/extreme/results
 ```
 
 ---
 
 ## Documentation Suite
 
-- [**Language Specification (`docs/SPECIFICATION.md`)**](docs/SPECIFICATION.md): Formal EBNF grammar, cell model semantics, and lexical rules.
-- [**Performance Engineering (`docs/PERFORMANCE_ENGINEERING.md`)**](docs/PERFORMANCE_ENGINEERING.md): In-depth hardware breakdown of cache-line packing, AVX2 SIMD vectorization, and escape analysis.
-- [**Standard Library Reference (`docs/STDLIB_REFERENCE.md`)**](docs/STDLIB_REFERENCE.md): API documentation for `std/math.fc`, `std/array.fc`, and `std/string.fc`.
-- [**Benchmark Methodology (`docs/BENCHMARK_METHODOLOGY.md`)**](docs/BENCHMARK_METHODOLOGY.md): Scientific protocols, timing resolution, and validation invariants.
+- [**Language Specification (`docs/SPECIFICATION.md`)**](docs/SPECIFICATION.md): Cell model, grammar, and the four engines.
+- [**Measured performance (`docs/MEASURED_PERFORMANCE.md`)**](docs/MEASURED_PERFORMANCE.md): The published ranking, per-task times, and what the compiler rewrote.
+- [**Performance engineering (`docs/PERFORMANCE_ENGINEERING.md`)**](docs/PERFORMANCE_ENGINEERING.md): Integer width, the separable product, the odd sieve, and the arena.
+- [**Standard Library Reference (`docs/STDLIB_REFERENCE.md`)**](docs/STDLIB_REFERENCE.md): `std/math.fc`, `std/array.fc`, and `std/string.fc`.
+- [**Benchmark methodology (`docs/BENCHMARK_METHODOLOGY.md`)**](docs/BENCHMARK_METHODOLOGY.md): Checksums, clocks, and what is not a ranking.
 
 ---
 

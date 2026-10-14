@@ -4,6 +4,9 @@ __pycache__/
 benchmarks/extreme/smoke-results/
 benchmarks/extreme/results/build/
 benchmarks/extreme/results/generated/
+benchmarks/extreme/deep-results/
+benchmarks/extreme/native-results/
+benchmarks/extreme/lowered-results/
 __pycache__/
 *.pyc
 .system_generated/

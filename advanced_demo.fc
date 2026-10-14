@@ -1,5 +1,5 @@
 # =========================================================
-# Fractal Advanced Features: Pattern Matching & Actor Concurrency
+# Soma: match with guards, then a small concurrent sketch
 # =========================================================
 
 print("=== 1. Pattern Matching with Guards ===")

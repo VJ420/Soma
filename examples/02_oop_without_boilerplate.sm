@@ -1,5 +1,5 @@
-# 02_oop_without_boilerplate.fc
-# In Fractal, classes and objects are simply stateful cells.
+# 02_oop_without_boilerplate.sm
+# An object is a cell. Its parameters are the fields. There is no self.
 # No `class`, no `__init__`, no `this`, and NO `self`!
 
 BankAccount(owner, balance):

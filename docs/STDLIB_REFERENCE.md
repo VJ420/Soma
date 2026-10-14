@@ -8,7 +8,7 @@ Created & Designed by **[Vighnesh Jha](https://github.com/VJ420)** ([@VJ420](htt
 
 ## 1. `std/math.fc` — Mathematical & Numerical Kernels
 
-High-precision constants and optimized numeric functions.
+Constants and numeric cells. Load with `use "./std/math.fc" as math`. A `.sm` path resolves the same way.
 
 ### Constants
 - `math.pi`: Mathematical constant $\pi \approx 3.141592653589793$
@@ -24,7 +24,7 @@ High-precision constants and optimized numeric functions.
 - `math.circle_area(r)`: Evaluates $\pi r^2$.
 - `math.factorial(n)`: Evaluates $n!$ recursively.
 
-```fractal
+```soma
 15 -> math.square -> print
 ```
 
@@ -32,7 +32,7 @@ High-precision constants and optimized numeric functions.
 
 ## 2. `std/array.fc` — Functional Collection Pipelines
 
-High-throughput array transformations supporting functional pipelining (`->`).
+Array cells. Load with `use "./std/array.fc" as array`.
 
 ### Functions
 - `array.sum(list)`: Sum of the elements.
@@ -42,7 +42,7 @@ High-throughput array transformations supporting functional pipelining (`->`).
 - `array.contains(list, item)`: Containment lookup.
 - `array.reverse(list)`: Reversed copy.
 
-```fractal
+```soma
 [10, 20, 30, 40] -> array.average -> print
 ```
 
@@ -50,7 +50,7 @@ High-throughput array transformations supporting functional pipelining (`->`).
 
 ## 3. `std/string.fc` — String Manipulation & Formatting
 
-High-speed text processing and validation.
+String cells. Load with `use "./std/string.fc" as string`.
 
 ### Functions
 - `string.length(s)`: Character count.
@@ -59,6 +59,6 @@ High-speed text processing and validation.
 - `string.repeat(s, count)` / `string.repeat_str(s, count)`: Repeated copy.
 - `string.join(list, sep)`: Join elements with a separator.
 
-```fractal
-"FRACTAL" -> string.wrap("==[ ", " ]==") -> print
+```soma
+"Soma" -> string.wrap("==[ ", " ]==") -> print
 ```

@@ -1,7 +1,6 @@
 # ==========================================
-# Welcome to Fractal (.fc)
-# The language that beats Python at simplicity
-# and runs with C++ raw performance!
+# Soma demo. .sm is the usual extension. .fc still loads.
+# Cells, pipelines, and match. Speed numbers live in docs/MEASURED_PERFORMANCE.md.
 # ==========================================
 
 print("=== 1. The Power of Recursive Modularity ===")

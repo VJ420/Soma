@@ -1,4 +1,4 @@
-# Fractal Standard Array/List Utilities (std/array.fc)
+# Soma standard arrays (std/array.fc)
 
 sum(lst):
   total = 0
