@@ -1,0 +1,210 @@
+# Rendered by run_benchmarks.py. Every workload returns a deterministic checksum.
+
+queens_safe(columns, row, column):
+  prior_row = 0
+  is_safe = true
+  while (prior_row < row) and is_safe:
+    prior_column = columns[prior_row]
+    delta = prior_column - column
+    if delta < 0:
+      delta = 0 - delta
+    if (prior_column == column) or (delta == row - prior_row):
+      is_safe = false
+    prior_row = prior_row + 1
+  is_safe
+
+queens_search(columns, row, board_size):
+  if row == board_size:
+    1
+  else:
+    solution_count = 0
+    candidate_column = 0
+    while candidate_column < board_size:
+      if queens_safe(columns, row, candidate_column):
+        columns[row] = candidate_column
+        solution_count = solution_count + queens_search(columns, row + 1, board_size)
+      candidate_column = candidate_column + 1
+    solution_count
+
+run_nqueens(board_size):
+  columns = range(board_size)
+  index = 0
+  while index < board_size:
+    columns[index] = 0
+    index = index + 1
+  queens_search(columns, 0, board_size)
+
+run_mandelbrot(grid_size):
+  escape_total = 0
+  y_index = 0
+  while y_index < grid_size:
+    cy = (y_index / grid_size) * 2.0 - 1.0
+    x_index = 0
+    while x_index < grid_size:
+      cx = (x_index / grid_size) * 3.0 - 2.0
+      zx = 0.0
+      zy = 0.0
+      escape_iteration = 0
+      while ((zx * zx + zy * zy) <= 4.0) and (escape_iteration < 40):
+        next_x = zx * zx - zy * zy + cx
+        zy = 2.0 * zx * zy + cy
+        zx = next_x
+        escape_iteration = escape_iteration + 1
+      escape_total = escape_total + escape_iteration
+      x_index = x_index + 1
+    y_index = y_index + 1
+  escape_total
+
+run_matmul(matrix_size):
+  matrix_checksum = 0
+  matrix_i = 0
+  while matrix_i < matrix_size:
+    matrix_j = 0
+    while matrix_j < matrix_size:
+      matrix_cell = 0
+      matrix_k = 0
+      while matrix_k < matrix_size:
+        matrix_cell = matrix_cell + ((matrix_i * 3 + matrix_k * 7) % 97) * ((matrix_k * 5 + matrix_j * 11) % 89)
+        matrix_k = matrix_k + 1
+      matrix_checksum = matrix_checksum + matrix_cell
+      matrix_j = matrix_j + 1
+    matrix_i = matrix_i + 1
+  matrix_checksum
+
+run_lcs(sequence_size):
+  previous_row = range(sequence_size + 1)
+  current_row = range(sequence_size + 1)
+  clear_index = 0
+  while clear_index <= sequence_size:
+    previous_row[clear_index] = 0
+    current_row[clear_index] = 0
+    clear_index = clear_index + 1
+  sequence_i = 1
+  while sequence_i <= sequence_size:
+    left_value = (sequence_i * 3) % 26
+    current_row[0] = 0
+    sequence_j = 1
+    while sequence_j <= sequence_size:
+      if left_value == (sequence_j * 5) % 26:
+        current_row[sequence_j] = previous_row[sequence_j - 1] + 1
+      else:
+        previous_value = previous_row[sequence_j]
+        current_value = current_row[sequence_j - 1]
+        if previous_value > current_value:
+          current_row[sequence_j] = previous_value
+        else:
+          current_row[sequence_j] = current_value
+      sequence_j = sequence_j + 1
+    swap_row = previous_row
+    previous_row = current_row
+    current_row = swap_row
+    sequence_i = sequence_i + 1
+  previous_row[sequence_size]
+
+run_sieve(limit):
+  flags = range(limit + 1)
+  flag_index = 0
+  while flag_index <= limit:
+    flags[flag_index] = true
+    flag_index = flag_index + 1
+  flags[0] = false
+  flags[1] = false
+  factor = 2
+  while factor * factor <= limit:
+    if flags[factor]:
+      composite = factor * factor
+      while composite <= limit:
+        flags[composite] = false
+        composite = composite + factor
+    factor = factor + 1
+  prime_count = 0
+  count_index = 0
+  while count_index <= limit:
+    if flags[count_index]:
+      prime_count = prime_count + 1
+    count_index = count_index + 1
+  prime_count
+
+run_nbody(body_count):
+  x_positions = range(body_count)
+  y_positions = range(body_count)
+  x_velocities = range(body_count)
+  y_velocities = range(body_count)
+  body_index = 0
+  while body_index < body_count:
+    x_positions[body_index] = body_index * 1.0
+    y_positions[body_index] = body_index * 2.0 + 1.0
+    x_velocities[body_index] = 0.0
+    y_velocities[body_index] = 0.0
+    body_index = body_index + 1
+  step_index = 0
+  while step_index < 10:
+    force_i = 0
+    while force_i < body_count:
+      force_x = 0.0
+      force_y = 0.0
+      force_j = 0
+      while force_j < body_count:
+        if force_i != force_j:
+          delta_x = x_positions[force_j] - x_positions[force_i]
+          delta_y = y_positions[force_j] - y_positions[force_i]
+          distance_squared = delta_x * delta_x + delta_y * delta_y + 0.01
+          inverse_distance = 1.0 / sqrt(distance_squared * distance_squared * distance_squared)
+          force_x = force_x + delta_x * inverse_distance
+          force_y = force_y + delta_y * inverse_distance
+        force_j = force_j + 1
+      x_velocities[force_i] = x_velocities[force_i] + force_x * 0.01
+      y_velocities[force_i] = y_velocities[force_i] + force_y * 0.01
+      force_i = force_i + 1
+    move_index = 0
+    while move_index < body_count:
+      x_positions[move_index] = x_positions[move_index] + x_velocities[move_index] * 0.01
+      y_positions[move_index] = y_positions[move_index] + y_velocities[move_index] * 0.01
+      move_index = move_index + 1
+    step_index = step_index + 1
+  body_checksum = 0.0
+  checksum_index = 0
+  while checksum_index < body_count:
+    body_checksum = body_checksum + x_positions[checksum_index] + y_positions[checksum_index]
+    checksum_index = checksum_index + 1
+  body_checksum
+
+TreeNode(left, right):
+  check():
+    if left == none:
+      1
+    else:
+      1 + left.check() + right.check()
+
+build_tree(depth):
+  if depth <= 0:
+    TreeNode(none, none)
+  else:
+    TreeNode(build_tree(depth - 1), build_tree(depth - 1))
+
+run_binarytrees(depth):
+  root = build_tree(depth)
+  root.check()
+
+workload: "{{WORKLOAD}}"
+size: {{SIZE}}
+iterations: {{ITERATIONS}}
+total = 0.0
+iteration_index = 0
+while iteration_index < iterations:
+  if workload == "nqueens":
+    total = total + run_nqueens(size)
+  if workload == "mandelbrot":
+    total = total + run_mandelbrot(size)
+  if workload == "matmul":
+    total = total + run_matmul(size)
+  if workload == "lcs":
+    total = total + run_lcs(size)
+  if workload == "sieve":
+    total = total + run_sieve(size)
+  if workload == "nbody":
+    total = total + run_nbody(size)
+  if workload == "binarytrees":
+    total = total + run_binarytrees(size)
+  iteration_index = iteration_index + 1
+print("CHECKSUM:" + str(total))

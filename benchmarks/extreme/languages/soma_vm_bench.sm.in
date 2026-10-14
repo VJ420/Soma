@@ -1,0 +1,77 @@
+# VM-compatible subset: no indexing, imports, spawn, match, and/or operators.
+
+run_mandelbrot(grid_size):
+  escape_total = 0
+  y_index = 0
+  while y_index < grid_size:
+    cy = (y_index / grid_size) * 2.0 - 1.0
+    x_index = 0
+    while x_index < grid_size:
+      cx = (x_index / grid_size) * 3.0 - 2.0
+      zx = 0.0
+      zy = 0.0
+      escape_iteration = 0
+      continue_escape = true
+      while continue_escape:
+        if escape_iteration >= 40:
+          continue_escape = false
+        else:
+          if (zx * zx + zy * zy) > 4.0:
+            continue_escape = false
+          else:
+            next_x = zx * zx - zy * zy + cx
+            zy = 2.0 * zx * zy + cy
+            zx = next_x
+            escape_iteration = escape_iteration + 1
+      escape_total = escape_total + escape_iteration
+      x_index = x_index + 1
+    y_index = y_index + 1
+  escape_total
+
+run_matmul(matrix_size):
+  matrix_checksum = 0
+  matrix_i = 0
+  while matrix_i < matrix_size:
+    matrix_j = 0
+    while matrix_j < matrix_size:
+      matrix_cell = 0
+      matrix_k = 0
+      while matrix_k < matrix_size:
+        matrix_cell = matrix_cell + ((matrix_i * 3 + matrix_k * 7) % 97) * ((matrix_k * 5 + matrix_j * 11) % 89)
+        matrix_k = matrix_k + 1
+      matrix_checksum = matrix_checksum + matrix_cell
+      matrix_j = matrix_j + 1
+    matrix_i = matrix_i + 1
+  matrix_checksum
+
+TreeNode(left, right):
+  check():
+    if left == none:
+      1
+    else:
+      1 + left.check() + right.check()
+
+build_tree(depth):
+  if depth <= 0:
+    TreeNode(none, none)
+  else:
+    TreeNode(build_tree(depth - 1), build_tree(depth - 1))
+
+run_binarytrees(depth):
+  root = build_tree(depth)
+  root.check()
+
+workload: "{{WORKLOAD}}"
+size: {{SIZE}}
+iterations: {{ITERATIONS}}
+total = 0.0
+iteration_index = 0
+while iteration_index < iterations:
+  if workload == "mandelbrot":
+    total = total + run_mandelbrot(size)
+  if workload == "matmul":
+    total = total + run_matmul(size)
+  if workload == "binarytrees":
+    total = total + run_binarytrees(size)
+  iteration_index = iteration_index + 1
+print("CHECKSUM:" + str(total))

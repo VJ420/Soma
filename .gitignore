@@ -1,4 +1,10 @@
 __pycache__/
+*.py[cod]
+
+benchmarks/extreme/smoke-results/
+benchmarks/extreme/results/build/
+benchmarks/extreme/results/generated/
+__pycache__/
 *.pyc
 .system_generated/
 *.tmp

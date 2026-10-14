@@ -1,0 +1,56 @@
+name: Extreme cross-language benchmarks
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - benchmark/extreme-suite
+    paths:
+      - ".github/workflows/extreme-benchmarks.yml"
+      - "benchmarks/extreme/**"
+      - "lexer.py"
+      - "parser.py"
+      - "ast_nodes.py"
+      - "runtime_engine/**"
+      - "compiler.py"
+      - "vm.py"
+      - "transpiler_js.py"
+      - "soma_cli.py"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record runner toolchains
+        run: |
+          python3 --version
+          node --version
+          go version
+          rustc --version
+          g++ --version
+          lscpu
+
+      - name: Run existing language tests
+        run: python3 -m unittest discover tests -v
+
+      - name: Run measured benchmark suite
+        run: |
+          python3 benchmarks/extreme/run_benchmarks.py \
+            --output benchmarks/extreme/results
+
+      - name: Upload raw measurements and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soma-extreme-benchmark-results
+          path: |
+            benchmarks/extreme/results/raw_results.json
+            benchmarks/extreme/results/REPORT.md
+          if-no-files-found: error
+          retention-days: 30
