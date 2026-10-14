@@ -132,18 +132,18 @@ route_status(code):
 
 Older tables that showed Soma beating Rust were typed in. Those numbers are gone. The current suite is `benchmarks/extreme/`. It runs the same algorithms in Soma, Python, JavaScript, Go, Rust, and C++, checks a checksum, and keeps only timings from that run.
 
-On the published run (GitHub Actions 38512994105, commit `f9db3dc`, AMD EPYC 7763, 14 Oct 2026) the native Soma path was first of the six. Geometric-mean kernel time was **0.69×** the fastest other language, **0.63×** C++, and **0.59×** Rust. All 11 checksums matched. The task table, the cold-start times, and the explanation of the two compiler rewrites are in [docs/MEASURED_PERFORMANCE.md](docs/MEASURED_PERFORMANCE.md).
+On the published run (GitHub Actions 38517496358, commit `468ec56`, AMD EPYC 9V45, 14 Oct 2026) the native Soma path was first of the six across 17 tasks. Geometric-mean kernel time was **0.84×** the fastest other language, **0.79×** C++, and **0.71×** Rust. All 17 checksums matched. The task table is in [docs/MEASURED_PERFORMANCE.md](docs/MEASURED_PERFORMANCE.md).
 
 | Place | Runtime | Geomean vs fastest other |
 |---|---|---:|
-| 1 | Soma native | 0.69× |
-| 2 | C++ | 1.08× |
-| 3 | Rust | 1.16× |
-| 4 | Go | 1.51× |
-| 5 | JavaScript | 3.28× |
-| 6 | Python | 59.95× |
+| 1 | Soma native | 0.84× |
+| 2 | C++ | 1.06× |
+| 3 | Rust | 1.18× |
+| 4 | Go | 1.60× |
+| 5 | JavaScript | 3.46× |
+| 6 | Python | 62.78× |
 
-That ranking is one machine. Histogram, LCS, and N-queens still trail Rust on that run. Reproduce with:
+That ranking is one machine and one suite. Longest increasing subsequence, knapsack, and Life still trail the leader on that run. An earlier 11-task run on an AMD EPYC 7763 measured 0.69×. Reproduce with:
 
 ```bash
 python benchmarks/extreme/run_benchmarks.py --output benchmarks/extreme/results
