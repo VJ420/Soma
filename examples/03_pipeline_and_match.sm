@@ -1,4 +1,4 @@
-# 03_pipeline_and_match.fc
+# 03_pipeline_and_match.sm
 # Pipeline data transforms with `->` and pattern matching with guards
 
 classify_http(status):

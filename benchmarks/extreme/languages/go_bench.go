@@ -142,6 +142,139 @@ func checkTree(root *node) int {
 
 func binarytrees(depth int) float64 { return float64(checkTree(buildTree(depth))) }
 
+func bfs(nodeCount int) float64 {
+	dist := make([]int, nodeCount)
+	queue := make([]int, nodeCount)
+	for i := range dist {
+		dist[i] = -1
+	}
+	dist[0] = 0
+	head, tail := 0, 1
+	for head < tail {
+		node := queue[head]
+		head++
+		first := (node + 1) % nodeCount
+		second := (node*3 + 1) % nodeCount
+		if dist[first] < 0 {
+			dist[first] = dist[node] + 1
+			queue[tail] = first
+			tail++
+		}
+		if first != second && dist[second] < 0 {
+			dist[second] = dist[node] + 1
+			queue[tail] = second
+			tail++
+		}
+	}
+	checksum := 0
+	for _, value := range dist {
+		if value >= 0 {
+			checksum += value
+		}
+	}
+	return float64(checksum)
+}
+
+func sortChecksum(count int) float64 {
+	values := make([]int64, count)
+	aux := make([]int64, count)
+	state := int64(1)
+	for index := 0; index < count; index++ {
+		state = (state * 48271) % 2147483647
+		values[index] = state
+	}
+	for width := 1; width < count; width *= 2 {
+		for start := 0; start < count; start += 2 * width {
+			left, mid, right := start, start+width, start+2*width
+			if mid > count {
+				mid = count
+			}
+			if right > count {
+				right = count
+			}
+			leftIndex, rightIndex, writeIndex := left, mid, left
+			for leftIndex < mid && rightIndex < right {
+				if values[leftIndex] <= values[rightIndex] {
+					aux[writeIndex] = values[leftIndex]
+					leftIndex++
+				} else {
+					aux[writeIndex] = values[rightIndex]
+					rightIndex++
+				}
+				writeIndex++
+			}
+			for leftIndex < mid {
+				aux[writeIndex] = values[leftIndex]
+				leftIndex++
+				writeIndex++
+			}
+			for rightIndex < right {
+				aux[writeIndex] = values[rightIndex]
+				rightIndex++
+				writeIndex++
+			}
+			for copy := left; copy < right; copy++ {
+				values[copy] = aux[copy]
+			}
+		}
+	}
+	checksum := int64(0)
+	for index, value := range values {
+		checksum = (checksum + value*int64(index+1)) % 1000000007
+	}
+	return float64(checksum)
+}
+
+func stencil(grid int) float64 {
+	cells := grid * grid
+	current := make([]float64, cells)
+	next := make([]float64, cells)
+	for diagonal := 0; diagonal < grid; diagonal++ {
+		current[diagonal*grid+diagonal] = 1
+	}
+	for step := 0; step < 12; step++ {
+		for y := 0; y < grid; y++ {
+			for x := 0; x < grid; x++ {
+				center := current[y*grid+x]
+				left, right, up, down := center, center, center, center
+				if x > 0 {
+					left = current[y*grid+(x-1)]
+				}
+				if x+1 < grid {
+					right = current[y*grid+(x+1)]
+				}
+				if y > 0 {
+					up = current[(y-1)*grid+x]
+				}
+				if y+1 < grid {
+					down = current[(y+1)*grid+x]
+				}
+				next[y*grid+x] = (center + left + right + up + down) / 5
+			}
+		}
+		current, next = next, current
+	}
+	checksum := 0.0
+	for index, value := range current {
+		checksum += value * float64(index+1)
+	}
+	return checksum
+}
+
+func histogram(sampleCount int) float64 {
+	bins := make([]int64, 1024)
+	state := int64(1)
+	for sample := 0; sample < sampleCount; sample++ {
+		state = (state * 48271) % 2147483647
+		bins[state%1024]++
+	}
+	checksum := int64(0)
+	for index, count := range bins {
+		checksum += int64(index+1) * count
+	}
+	return float64(checksum)
+}
+
 func main() {
 	workload := os.Args[1]
 	size, _ := strconv.Atoi(os.Args[2])
@@ -149,6 +282,7 @@ func main() {
 	functions := map[string]func(int) float64{
 		"nqueens": nqueens, "mandelbrot": mandelbrot, "matmul": matmul,
 		"lcs": lcs, "sieve": sieve, "nbody": nbody, "binarytrees": binarytrees,
+		"bfs": bfs, "sort": sortChecksum, "stencil": stencil, "histogram": histogram,
 	}
 	total := 0.0
 	started := time.Now()

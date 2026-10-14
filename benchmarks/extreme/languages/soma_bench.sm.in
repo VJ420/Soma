@@ -186,6 +186,157 @@ run_binarytrees(depth):
   root = build_tree(depth)
   root.check()
 
+run_bfs(node_count):
+  dist = range(node_count)
+  queue = range(node_count)
+  index = 0
+  while index < node_count:
+    dist[index] = 0 - 1
+    queue[index] = 0
+    index = index + 1
+  dist[0] = 0
+  queue[0] = 0
+  head = 0
+  tail = 1
+  while head < tail:
+    node = queue[head]
+    head = head + 1
+    first = (node + 1) % node_count
+    second = (node * 3 + 1) % node_count
+    if dist[first] < 0:
+      dist[first] = dist[node] + 1
+      queue[tail] = first
+      tail = tail + 1
+    if (first != second) and (dist[second] < 0):
+      dist[second] = dist[node] + 1
+      queue[tail] = second
+      tail = tail + 1
+  checksum = 0
+  index = 0
+  while index < node_count:
+    if dist[index] >= 0:
+      checksum = checksum + dist[index]
+    index = index + 1
+  checksum
+
+run_sort(count):
+  values = range(count)
+  state = 1
+  fill = 0
+  while fill < count:
+    state = (state * 48271) % 2147483647
+    values[fill] = state
+    fill = fill + 1
+  aux = range(count)
+  width = 1
+  while width < count:
+    start = 0
+    while start < count:
+      left = start
+      mid = start + width
+      if mid > count:
+        mid = count
+      right = start + width + width
+      if right > count:
+        right = count
+      left_index = left
+      right_index = mid
+      write_index = left
+      while (left_index < mid) and (right_index < right):
+        if values[left_index] <= values[right_index]:
+          aux[write_index] = values[left_index]
+          left_index = left_index + 1
+        else:
+          aux[write_index] = values[right_index]
+          right_index = right_index + 1
+        write_index = write_index + 1
+      while left_index < mid:
+        aux[write_index] = values[left_index]
+        left_index = left_index + 1
+        write_index = write_index + 1
+      while right_index < right:
+        aux[write_index] = values[right_index]
+        right_index = right_index + 1
+        write_index = write_index + 1
+      copy_index = left
+      while copy_index < right:
+        values[copy_index] = aux[copy_index]
+        copy_index = copy_index + 1
+      start = start + width + width
+    width = width + width
+  checksum = 0
+  index = 0
+  while index < count:
+    checksum = (checksum + values[index] * (index + 1)) % 1000000007
+    index = index + 1
+  checksum
+
+run_stencil(grid):
+  cell_count = grid * grid
+  current = range(cell_count)
+  nxt = range(cell_count)
+  index = 0
+  while index < cell_count:
+    current[index] = 0.0
+    nxt[index] = 0.0
+    index = index + 1
+  diagonal = 0
+  while diagonal < grid:
+    current[diagonal * grid + diagonal] = 1.0
+    diagonal = diagonal + 1
+  step = 0
+  while step < 12:
+    y = 0
+    while y < grid:
+      x = 0
+      while x < grid:
+        center = current[y * grid + x]
+        left = center
+        if x > 0:
+          left = current[y * grid + (x - 1)]
+        right = center
+        if x + 1 < grid:
+          right = current[y * grid + (x + 1)]
+        up = center
+        if y > 0:
+          up = current[(y - 1) * grid + x]
+        down = center
+        if y + 1 < grid:
+          down = current[(y + 1) * grid + x]
+        nxt[y * grid + x] = (center + left + right + up + down) / 5.0
+        x = x + 1
+      y = y + 1
+    swap = current
+    current = nxt
+    nxt = swap
+    step = step + 1
+  checksum = 0.0
+  index = 0
+  while index < cell_count:
+    checksum = checksum + current[index] * (index + 1)
+    index = index + 1
+  checksum
+
+run_histogram(sample_count):
+  bins = range(1024)
+  clear = 0
+  while clear < 1024:
+    bins[clear] = 0
+    clear = clear + 1
+  state = 1
+  sample = 0
+  while sample < sample_count:
+    state = (state * 48271) % 2147483647
+    slot = state % 1024
+    bins[slot] = bins[slot] + 1
+    sample = sample + 1
+  checksum = 0
+  index = 0
+  while index < 1024:
+    checksum = checksum + (index + 1) * bins[index]
+    index = index + 1
+  checksum
+
 workload: "{{WORKLOAD}}"
 size: {{SIZE}}
 iterations: {{ITERATIONS}}
@@ -207,6 +358,14 @@ while iteration_index < iterations:
     total = total + run_nbody(size)
   if workload == "binarytrees":
     total = total + run_binarytrees(size)
+  if workload == "bfs":
+    total = total + run_bfs(size)
+  if workload == "sort":
+    total = total + run_sort(size)
+  if workload == "stencil":
+    total = total + run_stencil(size)
+  if workload == "histogram":
+    total = total + run_histogram(size)
   iteration_index = iteration_index + 1
 elapsed_ms = (perf() - started_at) * 1000.0
 print("CHECKSUM:" + str(total))

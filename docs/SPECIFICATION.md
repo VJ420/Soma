@@ -36,7 +36,7 @@ Where:
 
 ### Unification Matrix
 
-| Classical Paradigm | Classical Syntax (Python/Rust/Go) | Fractal Equivalent |
+| Classical Paradigm | Classical Syntax (Python/Rust/Go) | Soma Equivalent |
 | :--- | :--- | :--- |
 | **Variable** | `x = 42` | `x: 42` |
 | **Function** | `def f(x): return x + 1` | `f(x): x + 1` |
@@ -48,7 +48,7 @@ Where:
 
 ## 2. Syntax & Grammar Specifications
 
-Fractal enforces **70%+ less boilerplate** than Python, Rust, and Go.
+A cell is the whole declaration. There is no `def`, `class`, `self`, or `return`.
 
 ### Grammar EBNF (Core Rules)
 
@@ -71,89 +71,49 @@ SpawnStmt       ::= "spawn" ":" Block
 1. **Zero `self` / `this`**: Members are closed over lexically in the cell scope.
 2. **Zero `return`**: The tail expression of any cell or block automatically forms its result.
 3. **Pipelining (`->`)**: Natural left-to-right function chaining:
-   ```fractal
+   ```soma
    data -> filter_valid -> transform -> persist
    ```
 4. **String Interpolation**: Directly embedded without extra prefixes:
-   ```fractal
+   ```soma
    "Order ID {order.id} processed in {elapsed_ms}ms"
    ```
 
 ---
 
-## 3. Multi-Tier Execution Pipeline
+## 3. Execution
 
-Soma has one syntax and four ways to run it: the in-process interpreter, the bytecode machine, the V8 translator used by `soma run`, and a C++ source emitter. The V8 path is the fast everyday engine. It is not a claim of matching Rust.
+Soma has one syntax. `.sm` is the canonical extension. `.fc` still loads. `soma run` compiles with `g++` or `clang++` when one is on PATH, and otherwise translates to JavaScript for Node.
 
 ```
-       [ Source Code (.fc) ]
-                 |
-                 v
-       [ Indentation Lexer ]
-                 |
-                 v
-       [ Slotted AST Parser ]
-                 |
-                 +-----------------------+-----------------------+
-                 |                       |                       |
-                 v                       v                       v
-        [ Type Inference ]      [ Bytecode Compiler ]   [ Capability Sandbox ]
-                 |                       |                       |
-                 +-----------+-----------+                       |
-                             |                                   |
-                             v                                   v
-             +---------------+---------------+           [ Circuit Breaker ]
-             |               |               |                   |
-             v               v               v                   v
-      [ Tier 1: Interp ] [ Tier 2: VM ] [ Tier 3: JIT ] [ Tier 4: Beast AOT ]
-          (Safe REPL)      (Slotted)     (V8 Turbofan)     (C++20 AVX-512)
+[ Source (.sm) ] -> [ Lexer ] -> [ Parser ]
+                                    |
+          +------------+------------+------------+
+          |            |            |            |
+       Native         V8      Interpreter     VM
+       C++ -O3      Node.js     AST walk    bytecode
 ```
 
-### Tier 1: Slotted AST Enterprise Interpreter
-- Slotted memory nodes (`@dataclass(slots=True, frozen=True)`).
-- Guaranteed $O(1)$ attribute lookup.
-- Integrated circuit breakers (`concurrency/circuit_breaker.py`) with automatic tri-state failure isolation (`CLOSED` $\to$ `OPEN` $\to$ `HALF_OPEN`).
+- **Native** (`aot_engine/native_compiler.py`): cells become C++. Integers that fit are 32-bit, wide products stay 64-bit, boolean arrays are bytes, a separable triple loop becomes a double reduction, the textbook sieve becomes the odd-only sieve, and object cells come from an arena that rewinds. This is the engine measured in [MEASURED_PERFORMANCE.md](MEASURED_PERFORMANCE.md).
+- **V8** (`transpiler_js.py`): JavaScript executed by Node. Fallback when no C++ compiler is installed.
+- **Interpreter** (`runtime_engine/enterprise_interpreter.py`): in-process AST walk. The REPL uses it. `spawn` runs here.
+- **Bytecode** (`compiler.py`, `vm.py`): in-process stack machine.
 
-### Tier 2: Stack-Based Bytecode Virtual Machine
-- Custom instruction set: `LOAD_CONST`, `LOAD_VAR`, `STORE_VAR`, `BINARY_ADD`, `CALL`, `RETURN`, `SPAWN`.
-- Constant pooling and indexed variable slot frames.
-
-### Tier 3: High-Throughput JIT Engine
-- Transpiles directly into ES2024 V8 bytecode with TurboFan JIT optimization.
-- Generates unboxed `Float64Array` typed storage for arithmetic matrices.
-- This is the engine behind `soma run`. It is in the same performance class as JavaScript. It is not a measured win over Rust or C++.
-
-### Tier 4: Beast Native AOT Vectorizer (C++20 SIMD)
-- Emits clean ISO C++20 code.
-- **Cache-line memory packing**: `alignas(64)` on cell records prevents cache thrashing and false sharing across cores.
-- **Auto-Vectorization**: `#pragma omp simd` triggers 256-bit AVX2 and 512-bit AVX-512 vector pipelines.
-- **Monomorphization**: Complete function inlining eliminates call stack overhead.
-- **Matches and outperforms Rust Opt-3 and Go 1.22** on raw mathematical loops.
+`soma --check` prints inferred types and then runs. `--sandbox` denies file, network, and subprocess access. The measured ranking is one run on one machine. It is not a property of every program.
 
 ---
 
-## 4. Fractal Autonomous Agent Swarms (FRAA)
+## 4. Agent swarm
 
-Fractal is the first programming language built from the ground up for the agentic era.
+`soma swarm "goal"` is a Python coordinator (`agentic_infra.py`) around Soma cells. It splits a goal into worker cells and assistant cells and runs the leaves on threads. It is not a second language, and it is not the benchmark in [MEASURED_PERFORMANCE.md](MEASURED_PERFORMANCE.md).
 
-```fractal
-# Intention-Based Swarm Execution
-swarm "Analyze high-frequency telemetry stream":
-    partition = 100000
-    parallel_workers = 16
-```
-
-Under the hood:
-1. The **Swarm Decomposer** breaks large computational tasks into independent sub-agent cells.
-2. The **Lock-Free Fiber Scheduler** distributes chunks across hardware CPU cores.
-3. Sub-agents communicate through zero-copy ring buffers and actor channels.
-4. Circuit breakers isolate faulty sub-agents without bringing down the main supervisor cell.
+Inside a program, `spawn` starts a block and the cell that started it waits for that block to finish.
 
 ---
 
 ## 5. Security & Sandbox Invariant Enforcement
 
-Fractal code runs inside a deterministic **Capability-Based Sandbox Policy Engine** (`security/sandbox.py`):
+With `--sandbox`, a program runs under `security/sandbox.py`:
 - `FILE_SYSTEM`: Read, write, or isolated access.
 - `NETWORK`: Inbound, outbound, or air-gapped isolation.
 - `EXEC`: Subprocess spawning permissions.

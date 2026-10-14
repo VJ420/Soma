@@ -1,9 +1,8 @@
-# 01_hello_cells.fc
-# Welcome to Fractal - Infinite Depth from a Single Rule.
-# "Built in India for Elite Developers"
+# 01_hello_cells.sm
+# One cell for a value, a function, and a pipeline.
 
-# 1. Variables are 0-arg cells
-msg: "Namaste, World from Fractal!"
+# 1. A value is a cell with no parameters
+msg: "Namaste, World from Soma!"
 print(msg)
 
 # 2. Universal Cells: Functions without 'def', 'func', or 'fn'

@@ -81,6 +81,7 @@ def build_binary(
     command: list[str],
     artifact: Path,
     source: Path,
+    extra_env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     if shutil.which(command[0]) is None:
         return {
@@ -90,8 +91,11 @@ def build_binary(
             "bytes": source.stat().st_size,
         }
     artifact.parent.mkdir(parents=True, exist_ok=True)
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
     started = time.perf_counter()
-    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, env=env)
     duration_ms = (time.perf_counter() - started) * 1000.0
     if result.returncode != 0:
         return {
@@ -164,6 +168,7 @@ def runtime_commands(build_dir: Path) -> dict[str, Any]:
             str(size),
             str(iterations),
         ],
+        "Soma": lambda _workload, _size, _iterations, soma: [str(soma)],
         "Soma interpreter": lambda _workload, _size, _iterations, soma: [
             sys.executable,
             str(ROOT / "soma_cli.py"),
@@ -191,6 +196,33 @@ def runtime_commands(build_dir: Path) -> dict[str, Any]:
     }
 
 
+def compile_soma_native(source: Path, build_dir: Path) -> tuple[list[str] | None, str | None]:
+    """Lower one Soma program and compile it with the host C++ compiler."""
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    compiler = shutil.which("g++") or shutil.which("clang++")
+    if compiler is None:
+        return None, "g++ or clang++ was not found on PATH"
+    from aot_engine.native_compiler import NativeCompiler, NativeCompileError
+
+    binary = build_dir / (source.stem + (".exe" if os.name == "nt" else ""))
+    cpp_path = build_dir / f"{source.stem}.cpp"
+    try:
+        cpp = NativeCompiler().compile_source(source.read_text(encoding="utf-8"))
+    except (NativeCompileError, SyntaxError) as error:
+        return None, str(error)
+    cpp_path.write_text(cpp, encoding="utf-8")
+    result = subprocess.run(
+        [compiler, "-O3", "-std=c++20", "-march=native", "-o", str(binary), str(cpp_path)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None, (result.stderr or result.stdout)[-2000:]
+    return [str(binary)], None
+
+
 def percentile95(values: list[float]) -> float:
     ordered = sorted(values)
     return ordered[max(0, math.ceil(len(ordered) * 0.95) - 1)]
@@ -209,6 +241,8 @@ def parse_elapsed_ms(output: str) -> float | None:
 def checksums_match(workload: str, expected: float, actual: float) -> bool:
     if workload == "nbody":
         return math.isclose(expected, actual, rel_tol=1e-8, abs_tol=1e-7)
+    if workload == "stencil":
+        return math.isclose(expected, actual, rel_tol=1e-6, abs_tol=1e-5)
     return expected == actual
 
 
@@ -249,6 +283,7 @@ def main() -> None:
         "Go": 100,
         "Rust": 100,
         "C++": 100,
+        "Soma": 100,
         "Soma interpreter": 1,
         "Soma JIT": 10,
         "Soma VM": 1,
@@ -277,6 +312,11 @@ def main() -> None:
             "duration_ms": 0.0,
             "bytes": (LANGUAGES / "javascript_bench.js").stat().st_size,
         },
+        "Soma": {
+            "status": "compiled-per-workload",
+            "duration_ms": None,
+            "bytes": (LANGUAGES / "soma_bench.sm.in").stat().st_size,
+        },
         "Soma interpreter": {
             "status": "interpreted",
             "duration_ms": 0.0,
@@ -297,23 +337,24 @@ def main() -> None:
             ["go", "build", "-ldflags=-s -w", "-o", str(go_binary), str(go_source)],
             go_binary,
             go_source,
+            {"GOAMD64": "v3"},
         ),
         "Rust": build_binary(
             "Rust",
-            ["rustc", "-C", "opt-level=3", "-C", "debuginfo=0", "-o", str(rust_binary), str(rust_source)],
+            ["rustc", "-C", "opt-level=3", "-C", "target-cpu=native", "-C", "debuginfo=0", "-o", str(rust_binary), str(rust_source)],
             rust_binary,
             rust_source,
         ),
         "C++": build_binary(
             "C++",
-            ["g++", "-O3", "-std=c++20", "-o", str(cpp_binary), str(cpp_source)],
+            ["g++", "-O3", "-std=c++20", "-march=native", "-o", str(cpp_binary), str(cpp_source)],
             cpp_binary,
             cpp_source,
         ),
     }
 
     commands = runtime_commands(build_dir)
-    selected_runtimes = args.runtimes or list(commands)
+    selected_runtimes = args.runtimes or manifest.get("runtimes") or list(commands)
     selected_workloads = args.workloads or list(manifest["workloads"])
     template = (LANGUAGES / "soma_bench.sm.in").read_text(encoding="utf-8")
     vm_template = (LANGUAGES / "soma_vm_bench.sm.in").read_text(encoding="utf-8")
@@ -330,7 +371,13 @@ def main() -> None:
             }
             continue
         soma_source = cold_vm if runtime == "Soma VM" else cold_soma
-        command = commands[runtime]("mandelbrot", 1, 0, soma_source)
+        if runtime == "Soma":
+            command, error = compile_soma_native(soma_source, build_dir)
+            if error:
+                cold_starts[runtime] = {"status": "failed", "reason": error}
+                continue
+        else:
+            command = commands[runtime]("mandelbrot", 1, 0, soma_source)
         samples = [run_process(command, timeout) for _ in range(repetitions)]
         successful = [
             sample["duration_ms"]
@@ -404,9 +451,15 @@ def main() -> None:
                     f'workload: "{rendered_workload}"', f'workload: "{workload}"'
                 )
                 runtime_soma_path.write_text(soma_source, encoding="utf-8")
-                command = commands[runtime](
-                    workload, size, inner_iterations, runtime_soma_path
-                )
+                if runtime == "Soma":
+                    command, error = compile_soma_native(runtime_soma_path, build_dir)
+                    if error:
+                        measurements.append({**base, "status": "failed", "reason": error})
+                        continue
+                else:
+                    command = commands[runtime](
+                        workload, size, inner_iterations, runtime_soma_path
+                    )
                 warmup = run_process(command, timeout)
                 warmup_checksum = parse_checksum(warmup["stdout"])
                 warmup_elapsed = parse_elapsed_ms(warmup["stdout"])
@@ -499,6 +552,12 @@ def main() -> None:
             "repetitions": repetitions,
             "runtime_iterations": runtime_iterations,
             "timeout_seconds": timeout,
+            "compile_flags": {
+                "C++": "g++ -O3 -std=c++20 -march=native",
+                "Rust": "rustc -C opt-level=3 -C target-cpu=native",
+                "Go": "go build with GOAMD64=v3",
+                "Soma": "g++ -O3 -std=c++20 -march=native",
+            },
         },
         "manifest": manifest,
         "builds": builds,

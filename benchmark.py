@@ -1,6 +1,6 @@
-"""
-Fractal Performance & Architecture Benchmark.
-Compares Fractal AST Interpreter vs Fractal Bytecode VM vs Native Execution.
+"""Local interpreter-versus-bytecode loop.
+
+This is not the cross-language ranking. That ranking is docs/MEASURED_PERFORMANCE.md.
 """
 import time
 from lexer import Lexer
@@ -22,7 +22,7 @@ print("Benchmark loop result:", sum)
 
 def run_benchmarks():
     print("=" * 55)
-    print("         FRACTAL LANGUAGE PERFORMANCE BENCHMARK         ")
+    print("         SOMA INTERPRETER VS BYTECODE LOOP         ")
     print("=" * 55)
 
     tokens = Lexer(BENCHMARK_CODE).tokenize()

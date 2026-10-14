@@ -1,4 +1,4 @@
-# Main application demonstrating multi-file Fractal architecture
+# Multi-file Soma program. Run from the repository root.
 use "./math_lib.fc" as math
 
 print("Imported math_lib successfully!")

@@ -1,6 +1,5 @@
-# 05_parallel_agent_swarm.fc
-# Autonomous Recursive Swarm Infrastructure (FRAA)
-# Decomposes compute tasks across concurrent execution fibers
+# 05_parallel_agent_swarm.sm
+# Worker cells. spawn is the concurrent form; this sample calls the workers directly.
 
 worker_task(chunk_id, batch_size):
     print("Agent Worker Cell [" + str(chunk_id) + "] initialized.")
@@ -12,7 +11,7 @@ worker_task(chunk_id, batch_size):
     print("Agent Worker Cell [" + str(chunk_id) + "] finished computation: " + str(sum))
     sum
 
-print("=== Starting Fractal Autonomous Swarm Cell ===")
+print("=== Starting Soma swarm cells ===")
 worker_task(1, 1000)
 worker_task(2, 1000)
 worker_task(3, 1000)

@@ -153,6 +153,91 @@ double binarytrees(int depth) {
     return check_tree(*build_tree(depth));
 }
 
+double bfs(int node_count) {
+    std::vector<int> dist(node_count, -1), queue(node_count);
+    dist[0] = 0;
+    int head = 0, tail = 1;
+    while (head < tail) {
+        const int node = queue[head++];
+        const int first = (node + 1) % node_count;
+        const int second = (node * 3 + 1) % node_count;
+        if (dist[first] < 0) {
+            dist[first] = dist[node] + 1;
+            queue[tail++] = first;
+        }
+        if (first != second && dist[second] < 0) {
+            dist[second] = dist[node] + 1;
+            queue[tail++] = second;
+        }
+    }
+    std::int64_t checksum = 0;
+    for (const int value : dist) if (value >= 0) checksum += value;
+    return static_cast<double>(checksum);
+}
+
+double sort_checksum(int count) {
+    std::vector<std::int64_t> values(count), aux(count);
+    std::int64_t state = 1;
+    for (int index = 0; index < count; ++index) {
+        state = (state * 48271) % 2147483647LL;
+        values[index] = state;
+    }
+    for (int width = 1; width < count; width *= 2) {
+        for (int start = 0; start < count; start += 2 * width) {
+            const int left = start;
+            const int mid = std::min(start + width, count);
+            const int right = std::min(start + 2 * width, count);
+            int left_index = left, right_index = mid, write_index = left;
+            while (left_index < mid && right_index < right) {
+                if (values[left_index] <= values[right_index]) aux[write_index++] = values[left_index++];
+                else aux[write_index++] = values[right_index++];
+            }
+            while (left_index < mid) aux[write_index++] = values[left_index++];
+            while (right_index < right) aux[write_index++] = values[right_index++];
+            for (int copy = left; copy < right; ++copy) values[copy] = aux[copy];
+        }
+    }
+    std::int64_t checksum = 0;
+    for (int index = 0; index < count; ++index) {
+        checksum = (checksum + values[index] * static_cast<std::int64_t>(index + 1)) % 1000000007LL;
+    }
+    return static_cast<double>(checksum);
+}
+
+double stencil(int grid) {
+    const int cells = grid * grid;
+    std::vector<double> current(cells), next_grid(cells);
+    for (int diagonal = 0; diagonal < grid; ++diagonal) current[diagonal * grid + diagonal] = 1.0;
+    for (int step = 0; step < 12; ++step) {
+        for (int y = 0; y < grid; ++y) {
+            for (int x = 0; x < grid; ++x) {
+                const double center = current[y * grid + x];
+                const double left = x > 0 ? current[y * grid + (x - 1)] : center;
+                const double right = x + 1 < grid ? current[y * grid + (x + 1)] : center;
+                const double up = y > 0 ? current[(y - 1) * grid + x] : center;
+                const double down = y + 1 < grid ? current[(y + 1) * grid + x] : center;
+                next_grid[y * grid + x] = (center + left + right + up + down) / 5.0;
+            }
+        }
+        current.swap(next_grid);
+    }
+    double checksum = 0.0;
+    for (int index = 0; index < cells; ++index) checksum += current[index] * (index + 1);
+    return checksum;
+}
+
+double histogram(int sample_count) {
+    std::vector<std::int64_t> bins(1024);
+    std::int64_t state = 1;
+    for (int sample = 0; sample < sample_count; ++sample) {
+        state = (state * 48271) % 2147483647LL;
+        bins[static_cast<size_t>(state % 1024)] += 1;
+    }
+    std::int64_t checksum = 0;
+    for (int index = 0; index < 1024; ++index) checksum += static_cast<std::int64_t>(index + 1) * bins[index];
+    return static_cast<double>(checksum);
+}
+
 int main(int argc, char** argv) {
     if (argc != 4) return 2;
     const std::string workload = argv[1];
@@ -161,6 +246,7 @@ int main(int argc, char** argv) {
     const std::vector<std::pair<std::string, double (*)(int)>> functions = {
         {"nqueens", nqueens}, {"mandelbrot", mandelbrot}, {"matmul", matmul},
         {"lcs", lcs}, {"sieve", sieve}, {"nbody", nbody}, {"binarytrees", binarytrees},
+        {"bfs", bfs}, {"sort", sort_checksum}, {"stencil", stencil}, {"histogram", histogram},
     };
     double (*function)(int) = nullptr;
     for (const auto& [name, candidate] : functions) {

@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::env;
 use std::time::Instant;
 
@@ -151,6 +152,117 @@ fn binarytrees(depth: usize) -> f64 {
     check_tree(&build_tree(depth)) as f64
 }
 
+fn bfs(node_count: usize) -> f64 {
+    let mut dist = vec![-1i64; node_count];
+    let mut queue = vec![0usize; node_count];
+    dist[0] = 0;
+    let mut head = 0usize;
+    let mut tail = 1usize;
+    while head < tail {
+        let node = queue[head];
+        head += 1;
+        let first = (node + 1) % node_count;
+        let second = (node * 3 + 1) % node_count;
+        if dist[first] < 0 {
+            dist[first] = dist[node] + 1;
+            queue[tail] = first;
+            tail += 1;
+        }
+        if first != second && dist[second] < 0 {
+            dist[second] = dist[node] + 1;
+            queue[tail] = second;
+            tail += 1;
+        }
+    }
+    dist.into_iter().filter(|value| *value >= 0).sum::<i64>() as f64
+}
+
+fn sort_checksum(count: usize) -> f64 {
+    let mut values = vec![0i64; count];
+    let mut aux = vec![0i64; count];
+    let mut state = 1i64;
+    for index in 0..count {
+        state = (state * 48271) % 2147483647;
+        values[index] = state;
+    }
+    let mut width = 1usize;
+    while width < count {
+        let mut start = 0usize;
+        while start < count {
+            let left = start;
+            let mid = min(start + width, count);
+            let right = min(start + width + width, count);
+            let mut left_index = left;
+            let mut right_index = mid;
+            let mut write_index = left;
+            while left_index < mid && right_index < right {
+                if values[left_index] <= values[right_index] {
+                    aux[write_index] = values[left_index];
+                    left_index += 1;
+                } else {
+                    aux[write_index] = values[right_index];
+                    right_index += 1;
+                }
+                write_index += 1;
+            }
+            while left_index < mid {
+                aux[write_index] = values[left_index];
+                left_index += 1;
+                write_index += 1;
+            }
+            while right_index < right {
+                aux[write_index] = values[right_index];
+                right_index += 1;
+                write_index += 1;
+            }
+            for copy in left..right {
+                values[copy] = aux[copy];
+            }
+            start += width + width;
+        }
+        width += width;
+    }
+    let mut checksum = 0i64;
+    for (index, value) in values.iter().enumerate() {
+        checksum = (checksum + value * (index as i64 + 1)) % 1000000007;
+    }
+    checksum as f64
+}
+
+fn stencil(grid: usize) -> f64 {
+    let cells = grid * grid;
+    let mut current = vec![0.0f64; cells];
+    let mut next = vec![0.0f64; cells];
+    for diagonal in 0..grid {
+        current[diagonal * grid + diagonal] = 1.0;
+    }
+    for _ in 0..12 {
+        for y in 0..grid {
+            for x in 0..grid {
+                let center = current[y * grid + x];
+                let left = if x > 0 { current[y * grid + (x - 1)] } else { center };
+                let right = if x + 1 < grid { current[y * grid + (x + 1)] } else { center };
+                let up = if y > 0 { current[(y - 1) * grid + x] } else { center };
+                let down = if y + 1 < grid { current[(y + 1) * grid + x] } else { center };
+                next[y * grid + x] = (center + left + right + up + down) / 5.0;
+            }
+        }
+        std::mem::swap(&mut current, &mut next);
+    }
+    current.iter().enumerate().map(|(index, value)| value * (index as f64 + 1.0)).sum()
+}
+
+fn histogram(sample_count: usize) -> f64 {
+    let mut bins = vec![0i64; 1024];
+    let mut state = 1i64;
+    for _ in 0..sample_count {
+        state = (state * 48271) % 2147483647;
+        let slot = (state % 1024) as usize;
+        bins[slot] += 1;
+    }
+    bins.iter().enumerate().map(|(index, count)| (index as i64 + 1) * count).sum::<i64>() as f64
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let workload = args[1].as_str();
@@ -164,6 +276,10 @@ fn main() {
         "sieve" => sieve,
         "nbody" => nbody,
         "binarytrees" => binarytrees,
+        "bfs" => bfs,
+        "sort" => sort_checksum,
+        "stencil" => stencil,
+        "histogram" => histogram,
         _ => panic!("unknown workload"),
     };
     let started = Instant::now();
