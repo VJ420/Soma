@@ -1,14 +1,19 @@
 """
-Fractal Bytecode Compiler.
-Translates AST into high-speed BytecodeChunks for the Fractal Virtual Machine.
+Soma bytecode compiler.
+Translates a Soma AST into chunks for the Soma virtual machine.
 """
 from typing import List, Optional
 from bytecode import OpCode, BytecodeChunk
 from ast_nodes import (
     ASTNode, ProgramNode, CellDefNode, AssignmentNode, MemberAssignmentNode,
     PipelineNode, CallNode, MemberAccessNode, BinaryOpNode, UnaryOpNode,
-    LiteralNode, IdentifierNode, ListNode, MapNode, IfNode, ForNode, WhileNode
+    LiteralNode, IdentifierNode, ListNode, MapNode, IfNode, ForNode, WhileNode,
+    IndexAccessNode, IndexAssignmentNode, MatchNode
 )
+
+
+class CompileError(NotImplementedError):
+    """Raised when a Soma construct cannot run on the bytecode engine."""
 
 class Compiler:
     def __init__(self):
@@ -56,7 +61,24 @@ class Compiler:
             n_idx = self.chunk.add_name(node.member)
             self.chunk.add_instruction(OpCode.GET_ATTR, n_idx)
 
+        elif isinstance(node, IndexAccessNode):
+            self._compile_node(node.target)
+            self._compile_node(node.index)
+            self.chunk.add_instruction(OpCode.GET_INDEX)
+
+        elif isinstance(node, IndexAssignmentNode):
+            self._compile_node(node.target)
+            self._compile_node(node.index)
+            self._compile_node(node.value)
+            self.chunk.add_instruction(OpCode.SET_INDEX)
+
         elif isinstance(node, BinaryOpNode):
+            if node.op == "and":
+                self._compile_logic(node, jump_when_true=False)
+                return
+            if node.op == "or":
+                self._compile_logic(node, jump_when_true=True)
+                return
             self._compile_node(node.left)
             self._compile_node(node.right)
             op_map = {
@@ -76,7 +98,7 @@ class Compiler:
             if node.op in op_map:
                 self.chunk.add_instruction(op_map[node.op])
             else:
-                raise NotImplementedError(f"Binary operator {node.op} not implemented in compiler")
+                raise CompileError(f"Binary operator {node.op} is not implemented in the Soma VM")
 
         elif isinstance(node, UnaryOpNode):
             if node.op == "-":
@@ -160,15 +182,9 @@ class Compiler:
 
             jump_exit = self.chunk.add_instruction(OpCode.JUMP_IF_FALSE, 0)
 
-            # var = iter[i]
             self.chunk.add_instruction(OpCode.LOAD_NAME, self.chunk.add_name(iter_name))
             self.chunk.add_instruction(OpCode.LOAD_NAME, self.chunk.add_name(i_name))
-            # Builtin indexing via GET_ATTR or call
-            self.chunk.add_instruction(OpCode.LOAD_NAME, self.chunk.add_name("__get_index"))
-            # For VM list access
-            self.chunk.add_instruction(OpCode.LOAD_NAME, self.chunk.add_name(iter_name))
-            self.chunk.add_instruction(OpCode.LOAD_NAME, self.chunk.add_name(i_name))
-            self.chunk.add_instruction(OpCode.CALL_CELL, 2)
+            self.chunk.add_instruction(OpCode.GET_INDEX)
             self.chunk.add_instruction(OpCode.STORE_NAME, self.chunk.add_name(node.var_name))
 
             for stmt in node.body:
@@ -190,12 +206,71 @@ class Compiler:
                 sub_compiler._compile_node(stmt)
             sub_compiler.chunk.add_instruction(OpCode.RETURN)
 
+            returns_instance = (
+                node.params is not None
+                and bool(node.body)
+                and any(isinstance(stmt, CellDefNode) for stmt in node.body)
+                and isinstance(node.body[-1], CellDefNode)
+            )
             cell_meta = {
                 "name": node.name,
                 "params": node.params,
-                "chunk": sub_compiler.chunk
+                "chunk": sub_compiler.chunk,
+                "returns_instance": returns_instance,
             }
             c_idx = self.chunk.add_constant(cell_meta)
             self.chunk.add_instruction(OpCode.MAKE_CELL, c_idx)
             n_idx = self.chunk.add_name(node.name)
             self.chunk.add_instruction(OpCode.STORE_NAME, n_idx)
+
+        elif isinstance(node, MatchNode):
+            self._compile_match(node)
+
+        else:
+            raise CompileError(
+                f"{type(node).__name__} is not available on the Soma VM. "
+                "Run the file with `soma run` or `--engine interpreter`."
+            )
+
+    def _compile_logic(self, node: BinaryOpNode, jump_when_true: bool) -> None:
+        self._compile_node(node.left)
+        self.chunk.add_instruction(OpCode.DUP)
+        opcode = OpCode.JUMP_IF_TRUE if jump_when_true else OpCode.JUMP_IF_FALSE
+        jump = self.chunk.add_instruction(opcode, 0)
+        self.chunk.add_instruction(OpCode.POP)
+        self._compile_node(node.right)
+        self.chunk.instructions[jump].arg = len(self.chunk.instructions)
+
+    def _compile_match(self, node: MatchNode) -> None:
+        slot = f"__match_{id(node)}"
+        self._compile_node(node.subject)
+        self.chunk.add_instruction(OpCode.STORE_NAME, self.chunk.add_name(slot))
+        end_jumps = []
+        for case in node.cases:
+            compare_jump = None
+            if isinstance(case.pattern, IdentifierNode) and case.pattern.name == "_":
+                pass
+            elif isinstance(case.pattern, IdentifierNode):
+                self.chunk.add_instruction(OpCode.LOAD_NAME, self.chunk.add_name(slot))
+                self.chunk.add_instruction(OpCode.STORE_NAME, self.chunk.add_name(case.pattern.name))
+            else:
+                self.chunk.add_instruction(OpCode.LOAD_NAME, self.chunk.add_name(slot))
+                self._compile_node(case.pattern)
+                self.chunk.add_instruction(OpCode.EQ)
+                compare_jump = self.chunk.add_instruction(OpCode.JUMP_IF_FALSE, 0)
+            guard_jump = None
+            if case.guard is not None:
+                self._compile_node(case.guard)
+                guard_jump = self.chunk.add_instruction(OpCode.JUMP_IF_FALSE, 0)
+            for stmt in case.body:
+                self._compile_node(stmt)
+            end_jumps.append(self.chunk.add_instruction(OpCode.JUMP, 0))
+            landing = len(self.chunk.instructions)
+            if compare_jump is not None:
+                self.chunk.instructions[compare_jump].arg = landing
+            if guard_jump is not None:
+                self.chunk.instructions[guard_jump].arg = landing
+        self.chunk.add_instruction(OpCode.LOAD_CONST, self.chunk.add_constant(None))
+        done = len(self.chunk.instructions)
+        for jump in end_jumps:
+            self.chunk.instructions[jump].arg = done

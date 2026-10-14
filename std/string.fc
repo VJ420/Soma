@@ -10,6 +10,11 @@ join(lst, sep):
       i = i + 1
     res
 
+length(s): len(s)
+is_empty(s): len(s) == 0
+wrap(s, prefix, suffix): prefix + s + suffix
+repeat(s, count): repeat_str(s, count)
+
 repeat_str(s, count):
   res = ""
   i = 0

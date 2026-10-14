@@ -355,11 +355,12 @@ class Interpreter:
             # Resolve module file
             resolved_path = os.path.abspath(node.module_path)
             if not os.path.exists(resolved_path):
-                # Try relative to current working directory or append .fc
-                if os.path.exists(resolved_path + ".fc"):
-                    resolved_path += ".fc"
+                for suffix in (".sm", ".fc"):
+                    if os.path.exists(resolved_path + suffix):
+                        resolved_path += suffix
+                        break
                 else:
-                    raise FileNotFoundError(f"Cannot find Fractal module file: {node.module_path}")
+                    raise FileNotFoundError(f"Soma module not found: {node.module_path}")
             
             with open(resolved_path, "r", encoding="utf-8") as f:
                 mod_src = f.read()

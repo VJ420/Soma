@@ -97,6 +97,7 @@ class EnterpriseInterpreterStrategy(IExecutionStrategy):
         self._logger = logger
         self._metrics = metrics
         self._circuit_breaker = circuit_breaker
+        self._sandbox = None
         self.global_scope = FractalRuntimeScope()
         self._init_builtins()
 
@@ -120,7 +121,25 @@ class EnterpriseInterpreterStrategy(IExecutionStrategy):
         def _float(x: Any) -> float: return float(x)
         def _type(x: Any) -> str: return type(x).__name__
         def _time() -> float: return time.time()
+        def _perf() -> float: return time.perf_counter()
         def _sleep(s: float) -> None: time.sleep(s)
+
+        def _call_user(fn: Any, args: List[Any]) -> Any:
+            if isinstance(fn, ProductionCallableCell):
+                return self._invoke(fn, args, self.global_scope)
+            if callable(fn):
+                return fn(*args)
+            raise TypeError("Target must be callable")
+
+        def _map(iterable: Any, fn: Any) -> List[Any]:
+            return [_call_user(fn, [item]) for item in iterable]
+
+        def _filter(iterable: Any, fn: Any) -> List[Any]:
+            return [item for item in iterable if _call_user(fn, [item])]
+
+        def _push(lst: List[Any], item: Any) -> List[Any]:
+            lst.append(item)
+            return lst
         
         class BoundedChannel:
             def __init__(self, capacity: int):
@@ -140,10 +159,12 @@ class EnterpriseInterpreterStrategy(IExecutionStrategy):
             return BoundedChannel(capacity=cap)
 
         def _read_file(p: str) -> str:
+            self._permit("READ_FILE", p)
             with open(p, "r", encoding="utf-8") as f:
                 return f.read()
 
         def _write_file(p: str, content: Any) -> int:
+            self._permit("WRITE_FILE", p)
             with open(p, "w", encoding="utf-8") as f:
                 f.write(str(content))
             return len(str(content))
@@ -160,10 +181,20 @@ class EnterpriseInterpreterStrategy(IExecutionStrategy):
         self.global_scope.set("float", _float)
         self.global_scope.set("type", _type)
         self.global_scope.set("time", _time)
+        self.global_scope.set("perf", _perf)
         self.global_scope.set("sleep", _sleep)
         self.global_scope.set("channel", _channel)
+        self.global_scope.set("map", _map)
+        self.global_scope.set("filter", _filter)
+        self.global_scope.set("push", _push)
         self.global_scope.set("read_file", _read_file)
         self.global_scope.set("write_file", _write_file)
+
+    def _permit(self, permission_name: str, resource: Optional[str] = None) -> None:
+        if self._sandbox is None:
+            return
+        from security.sandbox import Permission
+        self._sandbox.check_permission(Permission[permission_name], resource)
 
     def execute_ast(self, program: ProgramNode, context: Optional[Dict[str, Any]] = None) -> Any:
         return self._circuit_breaker.execute(lambda: self._execute_program_internal(program))
@@ -330,10 +361,13 @@ class EnterpriseInterpreterStrategy(IExecutionStrategy):
         if isinstance(node, UseNode):
             resolved_path = os.path.abspath(node.module_path)
             if not os.path.exists(resolved_path):
-                if os.path.exists(resolved_path + ".fc"):
-                    resolved_path += ".fc"
+                for suffix in (".sm", ".fc"):
+                    if os.path.exists(resolved_path + suffix):
+                        resolved_path += suffix
+                        break
                 else:
-                    raise FileNotFoundError(f"Fractal module not found: {node.module_path}")
+                    raise FileNotFoundError(f"Soma module not found: {node.module_path}")
+            self._permit("READ_FILE", resolved_path)
             
             with open(resolved_path, "r", encoding="utf-8") as f:
                 src = f.read()
@@ -352,6 +386,7 @@ class EnterpriseInterpreterStrategy(IExecutionStrategy):
             return instance
 
         if isinstance(node, SpawnNode):
+            self._permit("CONCURRENCY_SPAWN")
             def _async_worker():
                 worker_scope = FractalRuntimeScope(parent=scope, depth=scope.depth + 1)
                 for stmt in node.body:

@@ -45,6 +45,8 @@ class OpCode(Enum):
     # Attribute & Member Access
     GET_ATTR = auto()
     SET_ATTR = auto()
+    GET_INDEX = auto()
+    SET_INDEX = auto()
 
     # Cell / Function / Invocation
     MAKE_CELL = auto()

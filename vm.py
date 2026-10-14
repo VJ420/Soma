@@ -19,11 +19,19 @@ class VMCellInstance:
 
 class VMCallableCell:
     """Represents a compiled callable Cell / function in the VM."""
-    def __init__(self, name: str, chunk: BytecodeChunk, param_names: List[str], env: Dict[str, Any]):
+    def __init__(
+        self,
+        name: str,
+        chunk: BytecodeChunk,
+        param_names: List[str],
+        env: Dict[str, Any],
+        returns_instance: bool = False,
+    ):
         self.name = name
         self.chunk = chunk
         self.param_names = param_names
         self.closure_env = env
+        self.returns_instance = returns_instance
 
     def __repr__(self):
         return f"<CompiledCell '{self.name}({', '.join(self.param_names)})'>"
@@ -60,6 +68,8 @@ class FractalVM:
         self.globals["float"] = float
         self.globals["type"] = lambda x: type(x).__name__
         self.globals["time"] = time.time
+        self.globals["perf"] = time.perf_counter
+        self.globals["push"] = lambda lst, item: lst.append(item) or lst
         self.globals["json_parse"] = json.loads
         self.globals["json_stringify"] = lambda obj, indent=2: json.dumps(obj, indent=indent)
         self.globals["__get_index"] = lambda collection, idx: collection[idx]
@@ -95,17 +105,11 @@ class FractalVM:
 
             elif op == OpCode.LOAD_NAME:
                 name = frame.chunk.names[arg]
-                if name in frame.locals:
-                    self.push(frame.locals[name])
-                elif name in self.globals:
-                    self.push(self.globals[name])
-                else:
-                    raise NameError(f"Undefined variable '{name}' in VM scope")
+                self.push(self._load(frame, name))
 
             elif op == OpCode.STORE_NAME:
                 name = frame.chunk.names[arg]
-                val = self.pop()
-                frame.locals[name] = val
+                self._store(frame, name, self.pop())
 
             elif op == OpCode.POP:
                 self.pop()
@@ -220,6 +224,18 @@ class FractalVM:
                 else:
                     raise AttributeError(f"Object {target} has no attribute '{attr_name}'")
 
+            elif op == OpCode.GET_INDEX:
+                index = self.pop()
+                target = self.pop()
+                self.push(target[index])
+
+            elif op == OpCode.SET_INDEX:
+                value = self.pop()
+                index = self.pop()
+                target = self.pop()
+                target[index] = value
+                self.push(value)
+
             elif op == OpCode.SET_ATTR:
                 attr_name = frame.chunk.names[arg]
                 val = self.pop()
@@ -238,8 +254,13 @@ class FractalVM:
                 cell_chunk = cell_meta["chunk"]
                 params = cell_meta["params"]
                 if params is not None:
-                    # Callable cell
-                    callable_obj = VMCallableCell(name, cell_chunk, params, dict(frame.locals))
+                    callable_obj = VMCallableCell(
+                        name,
+                        cell_chunk,
+                        params,
+                        frame.locals,
+                        bool(cell_meta.get("returns_instance")),
+                    )
                     self.push(callable_obj)
                 else:
                     # Module / Namespace cell
@@ -254,7 +275,7 @@ class FractalVM:
                 callee = self.pop()
 
                 if isinstance(callee, VMCallableCell):
-                    call_locals = dict(callee.closure_env)
+                    call_locals = {}
                     for p_name, val in zip(callee.param_names, args):
                         call_locals[p_name] = val
                     new_frame = CallFrame(callee.chunk, call_locals, callee)
@@ -268,10 +289,9 @@ class FractalVM:
             elif op == OpCode.RETURN:
                 ret_val = self.pop() if self.stack else None
                 popped_frame = self.frames.pop()
-                # If returning from a constructor Cell that defines members, produce VMCellInstance
-                if popped_frame.caller_cell and not self._is_primitive(ret_val):
-                    instance = VMCellInstance(popped_frame.caller_cell.name, popped_frame.locals)
-                    self.push(instance)
+                cell = popped_frame.caller_cell
+                if cell is not None and cell.returns_instance:
+                    self.push(VMCellInstance(cell.name, popped_frame.locals))
                 else:
                     self.push(ret_val)
 
@@ -279,6 +299,25 @@ class FractalVM:
                 break
 
         return self.pop() if self.stack else None
+
+    def _load(self, frame: CallFrame, name: str) -> Any:
+        if name in frame.locals:
+            return frame.locals[name]
+        cell = frame.caller_cell
+        if cell is not None and name in cell.closure_env:
+            return cell.closure_env[name]
+        if name in self.globals:
+            return self.globals[name]
+        raise NameError(f"Undefined variable '{name}' in VM scope")
+
+    def _store(self, frame: CallFrame, name: str, value: Any) -> None:
+        cell = frame.caller_cell
+        if name in frame.locals:
+            frame.locals[name] = value
+        elif cell is not None and name in cell.closure_env:
+            cell.closure_env[name] = value
+        else:
+            frame.locals[name] = value
 
     def _is_primitive(self, val: Any) -> bool:
         return isinstance(val, (int, float, str, bool, list, dict, type(None)))

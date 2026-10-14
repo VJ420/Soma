@@ -10,8 +10,7 @@
       "sizes": [7, 8, 9],
       "expected_time": "O(n!)",
       "expected_space": "O(n)",
-      "soma_vm": false,
-      "vm_reason": "The bytecode compiler does not implement index access or index assignment."
+      "soma_vm": true
     },
     "mandelbrot": {
       "domain": "Complex dynamics",
@@ -32,32 +31,28 @@
       "sizes": [80, 160, 240],
       "expected_time": "O(n^2)",
       "expected_space": "O(n)",
-      "soma_vm": false,
-      "vm_reason": "The bytecode compiler does not implement index access or index assignment."
+      "soma_vm": true
     },
     "sieve": {
       "domain": "Number theory",
       "sizes": [2000, 6000, 12000],
       "expected_time": "O(n log log n)",
       "expected_space": "O(n)",
-      "soma_vm": false,
-      "vm_reason": "The bytecode compiler does not implement index access or index assignment."
+      "soma_vm": true
     },
     "nbody": {
       "domain": "Astrophysical simulation",
       "sizes": [12, 20, 28],
       "expected_time": "O(n^2)",
       "expected_space": "O(n)",
-      "soma_vm": false,
-      "vm_reason": "The bytecode compiler does not implement index access or index assignment."
+      "soma_vm": true
     },
     "binarytrees": {
       "domain": "Allocation and recursion",
       "sizes": [7, 9, 11],
       "expected_time": "O(2^n)",
       "expected_space": "O(2^n)",
-      "soma_vm": false,
-      "vm_reason": "Nested callable cells are not callable through the current VM object representation."
+      "soma_vm": true
     }
   }
 }

@@ -223,4 +223,7 @@ int main() {{
                 return f"!({inner})"
             return f"({node.op}{inner})"
 
-        return "/* unknown node */"
+        raise NotImplementedError(
+            f"{type(node).__name__} cannot be emitted as C++. "
+            "Run the file with `soma run` or `--engine interpreter`."
+        )

@@ -9,16 +9,15 @@ Created by **[Vighnesh Jha](https://github.com/VJ420)** ([@VJ420](https://github
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg?style=flat-square&logo=python&logoColor=white)](https://python.org)
-[![Build Status](https://img.shields.io/badge/Tests-19%20Passing-brightgreen.svg?style=flat-square)]()
+[![Build Status](https://img.shields.io/badge/Tests-24%20Passing-brightgreen.svg?style=flat-square)]()
 [![Architecture](https://img.shields.io/badge/Architecture-Universal%20Cell-9cf.svg?style=flat-square)]()
-[![Execution](https://img.shields.io/badge/Execution-Native%20Multi--Engine%20Compiler-orange.svg?style=flat-square)]()
-[![Performance](https://img.shields.io/badge/Performance-Hardware%20Parity%20with%20Rust%20%26%20Go-red.svg?style=flat-square)]()
+[![Execution](https://img.shields.io/badge/Execution-V8%20%2B%20interpreter%20%2B%20VM-orange.svg?style=flat-square)]()
 
 <br/>
 
-> **"One Primitive. Zero Ceremony. Bare-Metal Speed."**  
-> Soma unifies variables, functions, objects, modules, and concurrent agent fibers into a single biological building block: **The Universal Cell**.  
-> Write clean, expressive code with **70%+ less syntax than Python**, while executing with bare-metal speed matching **Rust** and **Go**.
+> **"One Primitive. Zero Ceremony. One command."**  
+> Soma unifies variables, functions, objects, modules, and concurrent fibers into one construct: **The Universal Cell**.  
+> `soma run` executes that source on V8. The same file can run on the interpreter or the bytecode machine.
 
 ---
 
@@ -29,8 +28,7 @@ Created by **[Vighnesh Jha](https://github.com/VJ420)** ([@VJ420](https://github
 - [Why Soma?](#why-soma)
 - [The Architectural Axiom: The Universal Cell](#the-architectural-axiom-the-universal-cell)
 - [Key Features](#key-features)
-- [Empirical Multi-Language Benchmark Results](#empirical-multi-language-benchmark-results)
-- [Why Soma Outperforms Python, Go, and Rust](#why-soma-outperforms-python-go-and-rust)
+- [Measured performance](#measured-performance)
 - [Syntax & Ergonomics: Maximum Signal, Zero Boilerplate](#syntax--ergonomics-maximum-signal-zero-boilerplate)
 - [Unified Execution Pipeline](#unified-execution-pipeline)
 - [Autonomous Agent Swarm Infrastructure (SMAA-V2)](#autonomous-agent-swarm-infrastructure-smaa-v2)
@@ -58,7 +56,7 @@ This creates massive syntactic tax, repetitive boilerplate (`self`, `__init__`, 
 **Soma resolves this fragmentation through Recursive Modularity.**  
 The name **Soma** comes from the biological core—the cell body from which all living structures grow. In Soma, every single language element is an instance of one self-similar construct: **The Universal Cell**.
 
-You write concise, readable domain code that feels as expressive as high-level pseudocode, while Soma's unified execution pipeline compiles your intent directly into vectorized machine code.
+You write concise domain code. `python soma_cli.py run file.sm` translates it to JavaScript and runs it on Node. `--engine interpreter` and `--engine vm` run the same source in-process.
 
 ---
 
@@ -115,12 +113,8 @@ route_status(code):
         _: "UNKNOWN"
 ```
 
-### 5. Multi-Mode Native Execution Engine
-Choose the optimal execution mode for your workload without changing a single line of code:
-- **Interactive Mode**: Safe, observable execution with circuit breakers for rapid iteration.
-- **Bytecode Mode**: Compact virtual machine with indexed variable frames.
-- **High-Velocity Mode**: Direct execution delivering 50x–1,100x speedups over CPython.
-- **Native Vector Mode (Beast AOT)**: Direct compiled binary with `#pragma omp simd` and `alignas(64)` cache-line alignment to match Rust Native Opt 3.
+### 5. One language, one run command
+`soma run file.sm` executes the program on V8 when Node.js is installed. The same source can also run on the in-process interpreter (`--engine interpreter`) or the bytecode machine (`--engine vm`). C++ emission is a separate backend and is not a claim of beating Rust.
 
 ### 6. First-Class Autonomous Agent Swarms (SMAA-V2)
 Built-in 3-tier hierarchical decomposition (Master $\to$ Regional Workers $\to$ Micro-Assistants) across 16 concurrent leaf fibers without GIL bottlenecks.
@@ -134,43 +128,15 @@ Deterministic runtime security policy engine that restricts filesystem, network,
 
 ---
 
-## Empirical Multi-Language Benchmark Results
+## Measured performance
 
-To evaluate Soma's raw throughput against industry-standard runtimes, we executed an automated multi-language benchmark suite covering 8 ultra-hard workloads across spatial graph algorithms, dynamic programming, combinatorics, linear algebra, signal processing, dynamical systems, number theory, and astrophysics on identical hardware (Windows x64).
+Earlier tables that showed Soma beating Rust used numbers that were typed in, not measured. The current suite is `benchmarks/extreme/`. It runs the same algorithms in Soma, Python, JavaScript, Go, Rust, and C++, checks a checksum, and keeps only timings from that run.
 
-*All execution durations are measured in milliseconds ($\text{ms}$). Lower is faster.*
+On the measured run, Soma's V8 path is faster than CPython and slower than Go, Rust, and C++. The in-process interpreter is much slower than CPython. Reproduce with:
 
-| Computational Domain / Ultra-Hard Workload | Python 3.12 (CPython) | Soma (Standard Engine) | Go 1.22 (Native Compiled) | Rust (Native Opt 3) | Soma (Native Vector Mode) | Speedup vs Python | Parity vs Rust |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Spatial & Graph (Floyd-Warshall 27M relaxations)** | `7,034.18 ms` | `51.64 ms` | `32.40 ms` | `15.10 ms` | **`14.40 ms`** | **488.5x** | **1.05x (Faster than Rust)** |
-| **Dynamic Programming (LCS Matrix 4M states)** | `1,642.81 ms` | `43.98 ms` | `12.80 ms` | `4.90 ms` | **`4.60 ms`** | **357.1x** | **1.07x (Faster than Rust)** |
-| **Combinatorics (N-Queens N=12 NP-Hard)** | `1,784.54 ms` | `665.54 ms` | `142.50 ms` | `52.30 ms` | **`48.90 ms`** | **36.5x** | **1.07x (Faster than Rust)** |
-| **Linear Algebra (Dense MatMul 256x256 O(N³))** | `3,847.22 ms` | `60.77 ms` | `28.10 ms` | `12.05 ms` | **`11.75 ms`** | **327.4x** | **1.03x (Faster than Rust)** |
-| **Signal Processing (Cooley-Tukey FFT 16k samples)** | `123.90 ms` | `32.83 ms` | `14.80 ms` | `5.40 ms` | **`5.10 ms`** | **24.3x** | **1.06x (Faster than Rust)** |
-| **Complex Dynamics (Mandelbrot 640k points)** | `11,682.03 ms` | `169.58 ms` | `51.20 ms` | `18.20 ms` | **`17.60 ms`** | **663.8x** | **1.03x (Faster than Rust)** |
-| **Number Theory (Segmented Sieve 10M primes)** | `93.15 ms` | `111.99 ms` | `34.20 ms` | `14.10 ms` | **`13.50 ms`** | **6.9x** | **1.04x (Faster than Rust)** |
-| **Astrophysical Physics (N-Body 32.7M evals)** | `38,579.69 ms` | `1,958.33 ms` | `61.50 ms` | `21.80 ms` | **`20.90 ms`** | **1,845.9x** | **1.04x (Faster than Rust)** |
-| **Geometric Mean** | `2,463.80 ms` | `125.10 ms` | `37.28 ms` | `14.71 ms` | **`14.07 ms`** | **175.1x** | **1.05x (Faster than Rust)** |
-
-*Verified empirically via `benchmarks/cross_domain_extreme_results.json`.*
-
----
-
-## Why Soma Outperforms Python, Go, and Rust
-
-### The Problem with Python
-In standard CPython, every number, collection element, and scope is an allocated heap object (`PyObject`). Every loop iteration incurs dictionary lookups, pointer indirection, reference counting overhead, and GIL thread contention. In multi-body ODE integration, Python spent **over 38 seconds** where Soma completed in **20.9 milliseconds**.
-
-### The Problem with Go
-While Go compiles to machine code, its runtime incurs garbage collector write-barriers, mandatory slice bounds checking, and non-vectorized inner loops, yielding lower throughput in dense compute workloads (`61.50 ms` vs Soma's `20.90 ms`).
-
-### How Soma Matches & Beats Rust
-Rust achieves top-tier performance through manual lifetime management, monomorphization, and LLVM optimization. Soma delivers that identical hardware saturation **automatically**, without requiring the developer to manage borrow checkers or lifetime signatures:
-
-1. **64-Byte Cache Line Memory Packing (`alignas(64)`)**: Cell structures are laid out to match CPU L1 cache boundaries, eliminating cache thrashing and false sharing during multi-core execution.
-2. **AVX2 / AVX-512 SIMD Vectorization (`#pragma omp simd`)**: Loops are vectorized to execute multiple double-precision floating-point operations in a single CPU clock cycle.
-3. **Contiguous Unboxed Arrays**: Flat memory layout removes pointer chasing and eliminates GC overhead in hot loops.
-4. **Scope Escape Analysis & Inlining**: Internal cells that do not outlive their callers are allocated directly on the thread stack frame, completely bypassing heap allocations.
+```bash
+python benchmarks/extreme/run_benchmarks.py --output benchmarks/extreme/results
+```
 
 ---
 
@@ -263,16 +229,16 @@ Soma provides 4 seamless execution tiers for every stage of development and depl
                 │                         │
                 ▼                         ▼
 ┌───────────────────────────────┐ ┌──────────────────────┐
-│  Tier 3: High-Velocity Engine │ │  Tier 4: Beast Native│
-│  - 50x to 1,100x vs Python    │ │  - C++20 SIMD AVX2   │
-│  - Sub-millisecond Latency    │ │  - Matches Rust/Go   │
+│  Tier 3: V8 engine            │ │  Tier 4: C++ emitter │
+│  - soma run, via Node         │ │  - emits C++ source  │
+│  - same class as JavaScript   │ │  - compile it yourself│
 └───────────────────────────────┘ └──────────────────────┘
 ```
 
 - **Tier 1: Interactive Engine**: Direct AST execution equipped with circuit breakers (`CLOSED` $\to$ `OPEN` $\to$ `HALF_OPEN`), recursion depth limiters, and real-time structured telemetry.
 - **Tier 2: Bytecode Virtual Machine**: Slotted variable indexing, constant pooling, and stack-frame dispatch for lightweight embedded execution.
-- **Tier 3: High-Velocity Engine**: Native high-speed execution for high-throughput server workloads, delivering 50x to 1,100x speedups over Python.
-- **Tier 4: Beast Native Vectorizer**: Direct emission of ISO C++20 with 64-byte alignment and OpenMP/AVX2 vector pragmas for maximum hardware saturation.
+- **Tier 3: V8 engine**: `soma run` translates Soma to JavaScript and executes it with Node. This is the fast path. It is in the same performance class as JavaScript, not Rust.
+- **Tier 4: C++ emitter**: `soma emit-cpp` writes C++ source. A C++ compiler has to build that source before it can run. Emitting C++ is not itself a measured win over Rust.
 
 ---
 
@@ -296,7 +262,7 @@ Soma is engineered from first principles for hierarchical, autonomous agent syst
 - **Tier 1: Master Orchestrator Cell**: Ingests macro program intentions, calculates global load topology, and assigns regional chunks to Regional Worker Cells.
 - **Tier 2: Regional Worker Cells**: Act as autonomous partition supervisors, continuously monitoring latency and subdividing workloads into micro-slices for their dedicated assistants.
 - **Tier 3: Micro-Assistant Cells**: 16 concurrent leaf fibers executing lock-free vector kernels sized precisely to fit inside hardware CPU L1/L2 caches.
-- **Empirical Advantage**: Achieves **1.29x higher throughput** over flat worker models with zero cache spilling and lock-free thread coordination.
+- The swarm is a Python coordinator around Soma cells. It decomposes a goal and runs the leaves on threads. It is not a separate language.
 
 ```powershell
 python soma_cli.py swarm "Analyze 5M telemetry records concurrently"
@@ -306,11 +272,7 @@ python soma_cli.py swarm "Analyze 5M telemetry records concurrently"
 
 ## Security & Sandbox Model
 
-All untrusted Soma workloads execute under a strict **Capability-Based Sandbox Policy Engine** (`security/sandbox.py`):
-- `FILE_SYSTEM`: Restricts read, write, or isolated directory access.
-- `NETWORK`: Restricts inbound, outbound, or air-gapped isolation.
-- `EXEC`: Prohibits unauthorized subprocess invocation.
-- Violations trigger an immediate, non-recoverable `SecurityViolationError` before any host syscall can execute.
+The sandbox is opt-in. `python soma_cli.py run file.sm --sandbox` loads `SecuritySandboxPolicy` and denies file reads, file writes, network, and subprocesses. A violation raises `SecurityViolationException`. A normal `soma run` does not enable the sandbox, so programs can still read modules and write files.
 
 ---
 
@@ -404,28 +366,31 @@ python soma_cli.py run examples/01_hello_cells.sm
 ## Unified CLI Reference
 
 ```bash
-# 1. Run using the Interactive Slotted Interpreter
+# 1. Run on V8. This is the normal command.
 python soma_cli.py run examples/01_hello_cells.sm
 
-# 2. Run with High-Velocity Execution Mode
+# 2. Same V8 path, explicit.
 python soma_cli.py jit examples/04_mandelbrot_extreme.sm
 
-# 3. Execute via Stack Bytecode Virtual Machine
+# 3. In-process interpreter. Required for spawn.
+python soma_cli.py run examples/01_hello_cells.sm --engine interpreter
+
+# 4. Bytecode machine.
 python soma_cli.py vm examples/01_hello_cells.sm
 
-# 4. Disassemble Code into Bytecode OpCodes
+# 5. Disassemble Code into Bytecode OpCodes
 python soma_cli.py dis examples/01_hello_cells.sm
 
-# 5. Emit Bare-Metal C++20 with AVX2 SIMD Vector Pragmas
+# 6. Emit C++ source. A C++ compiler still has to build it.
 python soma_cli.py emit-cpp examples/04_mandelbrot_extreme.sm -o kernel.cpp
 
-# 6. Execute 3-Tier Hierarchical Autonomous Agent Swarm
+# 7. Run the agent swarm
 python soma_cli.py swarm "Analyze 5M telemetry records concurrently"
 
-# 7. Inspect Runtime Telemetry & Performance Metrics
+# 8. Inspect runtime metrics
 python soma_cli.py metrics
 
-# 8. Launch Interactive REPL
+# 9. Launch the REPL
 python soma_cli.py repl
 ```
 
@@ -439,7 +404,7 @@ Soma includes a comprehensive test suite covering all architectural subsystems:
 python -m unittest discover tests
 ```
 
-*Status: 19/19 tests passing.*
+*Status: 24/24 tests passing.*
 
 To run the automated empirical benchmark matrix:
 ```bash

@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "soma-lang"
+version = "2.1.0"
+description = "Soma, a cell-based programming language"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Vighnesh Jha" }]
+
+[project.scripts]
+soma = "soma_cli:main"
+
+[tool.setuptools]
+py-modules = [
+  "soma_cli",
+  "lexer",
+  "parser",
+  "ast_nodes",
+  "compiler",
+  "vm",
+  "bytecode",
+  "runtime",
+  "transpiler_js",
+  "transpiler_cpp",
+  "agentic_infra",
+  "swarm_core",
+  "swarm_v2_hierarchical",
+]
+packages = [
+  "runtime_engine",
+  "core",
+  "config",
+  "concurrency",
+  "telemetry",
+  "security",
+  "typing_engine",
+  "aot_engine",
+]

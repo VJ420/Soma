@@ -15,7 +15,7 @@ Generates empirical results across:
 - Fractal JIT (V8 JIT compilation)
 - Go 1.22 (Compiled Native Benchmark Reference)
 - Rust 1.77+ (Opt-level 3 Native Benchmark Reference)
-- Fractal Beast AOT (C++20 SIMD Clang/LLVM Target)
+Go, Rust, and C++ are measured by benchmarks/extreme/run_benchmarks.py, not by this file.
 """
 import time
 import subprocess
@@ -89,8 +89,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_nq = run_py(py_nqueens)
     t_fc_nq = run_node(node_nqueens)
-    results["n_queens"] = {"py": t_py_nq, "fractal_jit": t_fc_nq, "go": 142.50, "rust": 52.30, "fractal_beast": 48.90}
-    print(f"      Python: {t_py_nq:7.2f} ms | Fractal JIT: {t_fc_nq:7.2f} ms | Go: 142.50 ms | Rust: 52.30 ms | Beast AOT: 48.90 ms")
+    results["n_queens"] = {"py": t_py_nq, "fractal_jit": t_fc_nq}
+    print(f"      Python: {t_py_nq:7.2f} ms | JavaScript: {t_fc_nq:7.2f} ms")
 
     # 2. MANDELBROT SET (800x800, 100 max iter)
     print("[2/7] Running Mandelbrot Set Escape Iterations (640,000 points)...")
@@ -136,8 +136,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_man = run_py(py_mandel)
     t_fc_man = run_node(node_mandel)
-    results["mandelbrot"] = {"py": t_py_man, "fractal_jit": t_fc_man, "go": 51.20, "rust": 18.20, "fractal_beast": 17.60}
-    print(f"      Python: {t_py_man:7.2f} ms | Fractal JIT: {t_fc_man:7.2f} ms | Go:  51.20 ms | Rust: 18.20 ms | Beast AOT: 17.60 ms")
+    results["mandelbrot"] = {"py": t_py_man, "fractal_jit": t_fc_man}
+    print(f"      Python: {t_py_man:7.2f} ms | JavaScript: {t_fc_man:7.2f} ms")
 
     # 3. DENSE MATRIX MULTIPLICATION (256x256)
     print("[3/7] Running Dense Matrix Multiplication (256x256 O(N^3))...")
@@ -176,8 +176,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_mm = run_py(py_matmul)
     t_fc_mm = run_node(node_matmul)
-    results["matmul"] = {"py": t_py_mm, "fractal_jit": t_fc_mm, "go": 28.10, "rust": 12.05, "fractal_beast": 11.75}
-    print(f"      Python: {t_py_mm:7.2f} ms | Fractal JIT: {t_fc_mm:7.2f} ms | Go:  28.10 ms | Rust: 12.05 ms | Beast AOT: 11.75 ms")
+    results["matmul"] = {"py": t_py_mm, "fractal_jit": t_fc_mm}
+    print(f"      Python: {t_py_mm:7.2f} ms | JavaScript: {t_fc_mm:7.2f} ms")
 
     # 4. COOLEY-TUKEY RADIX-2 FFT (16,384 Complex Points)
     print("[4/7] Running Cooley-Tukey Radix-2 FFT (16,384 Complex Points)...")
@@ -244,8 +244,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_fft = run_py(py_fft)
     t_fc_fft = run_node(node_fft)
-    results["fft"] = {"py": t_py_fft, "fractal_jit": t_fc_fft, "go": 14.80, "rust": 5.40, "fractal_beast": 5.10}
-    print(f"      Python: {t_py_fft:7.2f} ms | Fractal JIT: {t_fc_fft:7.2f} ms | Go:  14.80 ms | Rust:  5.40 ms | Beast AOT:  5.10 ms")
+    results["fft"] = {"py": t_py_fft, "fractal_jit": t_fc_fft}
+    print(f"      Python: {t_py_fft:7.2f} ms | JavaScript: {t_fc_fft:7.2f} ms")
 
     # 5. MONTE CARLO INTEGRATION (10M Points)
     print("[5/7] Running High-Dimensional Monte Carlo Integration (10M Points)...")
@@ -278,8 +278,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_mc = run_py(py_mc)
     t_fc_mc = run_node(node_mc)
-    results["monte_carlo"] = {"py": t_py_mc, "fractal_jit": t_fc_mc, "go": 86.40, "rust": 31.80, "fractal_beast": 30.90}
-    print(f"      Python: {t_py_mc:7.2f} ms | Fractal JIT: {t_fc_mc:7.2f} ms | Go:  86.40 ms | Rust: 31.80 ms | Beast AOT: 30.90 ms")
+    results["monte_carlo"] = {"py": t_py_mc, "fractal_jit": t_fc_mc}
+    print(f"      Python: {t_py_mc:7.2f} ms | JavaScript: {t_fc_mc:7.2f} ms")
 
     # 6. SEGMENTED SIEVE OF ERATOSTHENES (10,000,000 Primes)
     print("[6/7] Running Segmented Sieve of Eratosthenes (limit=10,000,000)...")
@@ -318,8 +318,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_sieve = run_py(py_sieve)
     t_fc_sieve = run_node(node_sieve)
-    results["prime_sieve"] = {"py": t_py_sieve, "fractal_jit": t_fc_sieve, "go": 34.20, "rust": 14.10, "fractal_beast": 13.50}
-    print(f"      Python: {t_py_sieve:7.2f} ms | Fractal JIT: {t_fc_sieve:7.2f} ms | Go:  34.20 ms | Rust: 14.10 ms | Beast AOT: 13.50 ms")
+    results["prime_sieve"] = {"py": t_py_sieve, "fractal_jit": t_fc_sieve}
+    print(f"      Python: {t_py_sieve:7.2f} ms | JavaScript: {t_fc_sieve:7.2f} ms")
 
     # 7. N-BODY GRAVITATIONAL DYNAMICS (256 particles, 500 steps)
     print("[7/7] Running N-Body Gravitational Dynamics (256 bodies, 500 steps)...")
@@ -385,8 +385,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_nb = run_py(py_nbody)
     t_fc_nb = run_node(node_nbody)
-    results["n_body"] = {"py": t_py_nb, "fractal_jit": t_fc_nb, "go": 61.50, "rust": 21.80, "fractal_beast": 20.90}
-    print(f"      Python: {t_py_nb:7.2f} ms | Fractal JIT: {t_fc_nb:7.2f} ms | Go:  61.50 ms | Rust: 21.80 ms | Beast AOT: 20.90 ms")
+    results["n_body"] = {"py": t_py_nb, "fractal_jit": t_fc_nb}
+    print(f"      Python: {t_py_nb:7.2f} ms | JavaScript: {t_fc_nb:7.2f} ms")
 
     with open("benchmarks/hard_math_results.json", "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)

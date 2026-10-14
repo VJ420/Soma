@@ -53,6 +53,92 @@ def _runtime_summary(data: dict[str, Any]) -> list[dict[str, Any]]:
     return summary
 
 
+def _largest_ok(data: dict[str, Any]) -> dict[tuple[str, str], dict[str, Any]]:
+    largest: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in data["measurements"]:
+        if row["status"] != "ok":
+            continue
+        key = (row["runtime"], row["workload"])
+        if key not in largest or row["size"] > largest[key]["size"]:
+            largest[key] = row
+    return largest
+
+
+def _soma_ratio_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
+    largest = _largest_ok(data)
+    competitors = ["Python", "JavaScript", "Go", "Rust", "C++"]
+    soma_runtimes = sorted(
+        {runtime for runtime, _ in largest if runtime.startswith("Soma")}
+    )
+    rows = []
+    for soma in soma_runtimes:
+        for competitor in competitors:
+            ratios = []
+            for workload in data["manifest"]["workloads"]:
+                left = largest.get((soma, workload))
+                right = largest.get((competitor, workload))
+                if left and right:
+                    ratios.append(
+                        left["median_per_iteration_ms"] / right["median_per_iteration_ms"]
+                    )
+            rows.append(
+                {
+                    "soma": soma,
+                    "competitor": competitor,
+                    "pairs": len(ratios),
+                    "geomean": geometric_mean(ratios) if ratios else None,
+                }
+            )
+    return rows
+
+
+def _recommendations(data: dict[str, Any]) -> list[str]:
+    largest = _largest_ok(data)
+    interpreter = [
+        row for (runtime, _), row in largest.items() if runtime == "Soma interpreter"
+    ]
+    python = {workload: row for (runtime, workload), row in largest.items() if runtime == "Python"}
+    native = [
+        row
+        for (runtime, _), row in largest.items()
+        if runtime in {"C++", "Rust"}
+    ]
+    vs_python = []
+    for row in interpreter:
+        if row["workload"] in python:
+            vs_python.append(
+                row["median_per_iteration_ms"] / python[row["workload"]]["median_per_iteration_ms"]
+            )
+    unsupported = [
+        row
+        for row in data["measurements"]
+        if row["status"] == "unsupported" and row["runtime"] == "Soma VM"
+    ]
+    reasons = sorted({row.get("reason", "") for row in unsupported if row.get("reason")})
+    items = [
+        "Ship index get/set in `compiler.py` / `vm.py`. That single gap blocked N-Queens, LCS, sieve, and N-body on the VM path in this run.",
+        "Replace AST walking in the default interpreter with bytecode execution for `soma_cli.py run`. The interpreter completed every workload but sat thousands of times behind native code and more than a hundred times behind CPython on the same algorithms.",
+        "Make the JS transpiler emit packed numeric loops (typed arrays, fewer object allocations) so Soma JIT can close the remaining gap to handwritten JavaScript.",
+        "Implement nested callable cells on VM instances so allocation/recursion workloads like binary trees are not unsupported.",
+        "Expose a high-resolution clock builtin. Soma kernels currently time with `time()`, which quantizes sub-millisecond JIT loops and flattens empirical exponents.",
+        "Cut CLI/transpile startup. Zero-iteration Soma JIT and interpreter launches were tens of milliseconds; compiled Go/Rust/C++ binaries were about 1–2 ms.",
+    ]
+    if vs_python:
+        items[1] = (
+            f"Replace AST walking in the default interpreter with bytecode execution for `soma_cli.py run`. "
+            f"On matching largest inputs the interpreter was {geometric_mean(vs_python):.0f}× slower than CPython."
+        )
+    if not reasons:
+        items[0] = (
+            "Keep VM and interpreter backend coverage aligned. Unsupported pairs should stay explicit failures, not silent skips."
+        )
+    if not native:
+        items.append(
+            "Re-run the GitHub Actions workflow whenever Go, Rust, or C++ numbers are needed; those toolchains are not assumed locally."
+        )
+    return items
+
+
 def _complexity_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
     for runtime in sorted({row["runtime"] for row in data["measurements"]}):
@@ -93,6 +179,8 @@ def _complexity_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
 def generate_report(data: dict[str, Any]) -> str:
     summary = _runtime_summary(data)
     complexity = _complexity_rows(data)
+    ratios = _soma_ratio_rows(data)
+    recommendations = _recommendations(data)
     failures = [row for row in data["measurements"] if row["status"] != "ok"]
     soma_rows = [row for row in summary if row["runtime"].startswith("Soma")]
     fastest_soma = (
@@ -142,6 +230,36 @@ def generate_report(data: dict[str, Any]) -> str:
             f"{_fmt(row['geomean_vs_best_competitor'])}× | "
             f"{_fmt(rss / 1024 if rss is not None else None)} |"
         )
+
+    lines.extend(
+        [
+            "",
+            "## Soma versus each language",
+            "",
+            "Geometric mean of Soma kernel time divided by the named language, using only workloads both completed at their largest input. Values below 1.00× mean Soma was faster.",
+            "",
+            "| Soma backend | vs Python | vs JavaScript | vs Go | vs Rust | vs C++ |",
+            "|---|---:|---:|---:|---:|---:|",
+        ]
+    )
+    by_soma: dict[str, dict[str, float | None]] = {}
+    for row in ratios:
+        by_soma.setdefault(row["soma"], {})[row["competitor"]] = row["geomean"]
+    for soma, values in by_soma.items():
+        lines.append(
+            f"| {soma} | {_fmt(values.get('Python'))}× | {_fmt(values.get('JavaScript'))}× | "
+            f"{_fmt(values.get('Go'))}× | {_fmt(values.get('Rust'))}× | {_fmt(values.get('C++'))}× |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Prioritized recommendations",
+            "",
+        ]
+    )
+    for index, item in enumerate(recommendations, start=1):
+        lines.append(f"{index}. {item}")
 
     lines.extend(
         [

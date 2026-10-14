@@ -16,7 +16,7 @@ Measures empirical runtimes across:
 - Soma JIT (V8 TurboFan JIT Engine)
 - Go 1.22 (Compiled Native Benchmark Reference)
 - Rust 1.77+ (Opt-level 3 Native Benchmark Reference)
-- Soma Beast AOT (C++20 SIMD AVX2 Target)
+Go, Rust, and C++ are measured by benchmarks/extreme/run_benchmarks.py, not by this file.
 """
 import time
 import subprocess
@@ -89,8 +89,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_nq = run_py(py_nq)
     t_sm_nq = run_node(node_nq)
-    results["n_queens"] = {"domain": "Combinatorics", "py": t_py_nq, "soma_jit": t_sm_nq, "go": 142.50, "rust": 52.30, "soma_beast": 48.90}
-    print(f"      Python: {t_py_nq:7.2f} ms | Soma JIT: {t_sm_nq:7.2f} ms | Go: 142.50 ms | Rust: 52.30 ms | Soma Beast: 48.90 ms")
+    results["n_queens"] = {"domain": "Combinatorics", "py": t_py_nq, "soma_jit": t_sm_nq}
+    print(f"      Python: {t_py_nq:7.2f} ms | JavaScript: {t_sm_nq:7.2f} ms")
 
     # 2. COMPLEX DYNAMICS: Mandelbrot (800x800)
     print("[2/8] Complex Dynamics: Mandelbrot Trajectories (640,000 points)...")
@@ -136,8 +136,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_man = run_py(py_man)
     t_sm_man = run_node(node_man)
-    results["mandelbrot"] = {"domain": "Complex Dynamics", "py": t_py_man, "soma_jit": t_sm_man, "go": 51.20, "rust": 18.20, "soma_beast": 17.60}
-    print(f"      Python: {t_py_man:7.2f} ms | Soma JIT: {t_sm_man:7.2f} ms | Go:  51.20 ms | Rust: 18.20 ms | Soma Beast: 17.60 ms")
+    results["mandelbrot"] = {"domain": "Complex Dynamics", "py": t_py_man, "soma_jit": t_sm_man}
+    print(f"      Python: {t_py_man:7.2f} ms | JavaScript: {t_sm_man:7.2f} ms")
 
     # 3. LINEAR ALGEBRA: Matrix Multiplication (256x256)
     print("[3/8] Linear Algebra: Dense Matrix Multiplication (256x256 O(N^3))...")
@@ -176,8 +176,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_mm = run_py(py_mm)
     t_sm_mm = run_node(node_mm)
-    results["matmul"] = {"domain": "Linear Algebra", "py": t_py_mm, "soma_jit": t_sm_mm, "go": 28.10, "rust": 12.05, "soma_beast": 11.75}
-    print(f"      Python: {t_py_mm:7.2f} ms | Soma JIT: {t_sm_mm:7.2f} ms | Go:  28.10 ms | Rust: 12.05 ms | Soma Beast: 11.75 ms")
+    results["matmul"] = {"domain": "Linear Algebra", "py": t_py_mm, "soma_jit": t_sm_mm}
+    print(f"      Python: {t_py_mm:7.2f} ms | JavaScript: {t_sm_mm:7.2f} ms")
 
     # 4. SIGNAL PROCESSING: Cooley-Tukey FFT (16,384 samples)
     print("[4/8] Signal Processing: Cooley-Tukey Radix-2 FFT (16,384 Points)...")
@@ -244,8 +244,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_fft = run_py(py_fft)
     t_sm_fft = run_node(node_fft)
-    results["fft"] = {"domain": "Signal Processing", "py": t_py_fft, "soma_jit": t_sm_fft, "go": 14.80, "rust": 5.40, "soma_beast": 5.10}
-    print(f"      Python: {t_py_fft:7.2f} ms | Soma JIT: {t_sm_fft:7.2f} ms | Go:  14.80 ms | Rust:  5.40 ms | Soma Beast:  5.10 ms")
+    results["fft"] = {"domain": "Signal Processing", "py": t_py_fft, "soma_jit": t_sm_fft}
+    print(f"      Python: {t_py_fft:7.2f} ms | JavaScript: {t_sm_fft:7.2f} ms")
 
     # 5. SPATIAL & GRAPH ALGORITHMS: Floyd-Warshall All-Pairs Shortest Path (300 nodes, 27M relaxations)
     print("[5/8] Spatial & Graph: Floyd-Warshall All-Pairs Shortest Path (300 nodes, 27M relaxations)...")
@@ -296,8 +296,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_fw = run_py(py_fw)
     t_sm_fw = run_node(node_fw)
-    results["floyd_warshall"] = {"domain": "Spatial & Graph", "py": t_py_fw, "soma_jit": t_sm_fw, "go": 32.40, "rust": 15.10, "soma_beast": 14.40}
-    print(f"      Python: {t_py_fw:7.2f} ms | Soma JIT: {t_sm_fw:7.2f} ms | Go:  32.40 ms | Rust: 15.10 ms | Soma Beast: 14.40 ms")
+    results["floyd_warshall"] = {"domain": "Spatial & Graph", "py": t_py_fw, "soma_jit": t_sm_fw}
+    print(f"      Python: {t_py_fw:7.2f} ms | JavaScript: {t_sm_fw:7.2f} ms")
 
     # 6. DYNAMIC PROGRAMMING: Longest Common Subsequence Matrix (5,000 x 5,000 = 25M states)
     print("[6/8] Dynamic Programming: High-Dimensional LCS Matrix (2,000 x 2,000 = 4M states)...")
@@ -348,8 +348,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_dp = run_py(py_dp)
     t_sm_dp = run_node(node_dp)
-    results["lcs_dp"] = {"domain": "Dynamic Programming", "py": t_py_dp, "soma_jit": t_sm_dp, "go": 12.80, "rust": 4.90, "soma_beast": 4.60}
-    print(f"      Python: {t_py_dp:7.2f} ms | Soma JIT: {t_sm_dp:7.2f} ms | Go:  12.80 ms | Rust:  4.90 ms | Soma Beast:  4.60 ms")
+    results["lcs_dp"] = {"domain": "Dynamic Programming", "py": t_py_dp, "soma_jit": t_sm_dp}
+    print(f"      Python: {t_py_dp:7.2f} ms | JavaScript: {t_sm_dp:7.2f} ms")
 
     # 7. NUMBER THEORY: Segmented Sieve of Eratosthenes (10,000,000)
     print("[7/8] Number Theory: Segmented Sieve of Eratosthenes (10M primes)...")
@@ -388,8 +388,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_sieve = run_py(py_sieve)
     t_sm_sieve = run_node(node_sieve)
-    results["prime_sieve"] = {"domain": "Number Theory", "py": t_py_sieve, "soma_jit": t_sm_sieve, "go": 34.20, "rust": 14.10, "soma_beast": 13.50}
-    print(f"      Python: {t_py_sieve:7.2f} ms | Soma JIT: {t_sm_sieve:7.2f} ms | Go:  34.20 ms | Rust: 14.10 ms | Soma Beast: 13.50 ms")
+    results["prime_sieve"] = {"domain": "Number Theory", "py": t_py_sieve, "soma_jit": t_sm_sieve}
+    print(f"      Python: {t_py_sieve:7.2f} ms | JavaScript: {t_sm_sieve:7.2f} ms")
 
     # 8. ASTROPHYSICAL PHYSICS ODE: N-Body Gravitation (256 bodies, 500 steps)
     print("[8/8] Astrophysical Physics ODE: N-Body Gravitational Dynamics (32.7M evals)...")
@@ -454,8 +454,8 @@ console.log((t1 - t0).toFixed(2));
 """
     t_py_nb = run_py(py_nbody)
     t_sm_nb = run_node(node_nbody)
-    results["n_body"] = {"domain": "Astrophysical Physics ODE", "py": t_py_nb, "soma_jit": t_sm_nb, "go": 61.50, "rust": 21.80, "soma_beast": 20.90}
-    print(f"      Python: {t_py_nb:7.2f} ms | Soma JIT: {t_sm_nb:7.2f} ms | Go:  61.50 ms | Rust: 21.80 ms | Soma Beast: 20.90 ms")
+    results["n_body"] = {"domain": "Astrophysical Physics ODE", "py": t_py_nb, "soma_jit": t_sm_nb}
+    print(f"      Python: {t_py_nb:7.2f} ms | JavaScript: {t_sm_nb:7.2f} ms")
 
     with open("benchmarks/cross_domain_extreme_results.json", "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)

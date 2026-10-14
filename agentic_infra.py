@@ -111,6 +111,23 @@ class MicroAssistantWorker:
         }
         return self.task
 
+class ParallelCellEngine:
+    """Compatibility name for older swarm scripts. Soma has one swarm coordinator."""
+
+    def __init__(self, max_workers: int = 4, assistants_per_worker: int = 4):
+        self._coordinator = None
+        self.max_workers = max_workers
+        self.assistants_per_worker = assistants_per_worker
+
+    def run_goal(self, goal: str, payload: Any = None) -> Dict[str, Any]:
+        from agentic_infra import HierarchicalSwarmCoordinator
+        self._coordinator = HierarchicalSwarmCoordinator(
+            workers_count=self.max_workers,
+            assistants_per_worker=self.assistants_per_worker,
+        )
+        return self._coordinator.run_swarm(goal, payload)
+
+
 class HierarchicalSwarmCoordinator:
     """
     Orchestrates the complete 3-Tier Hierarchical Swarm across threads and fibers.

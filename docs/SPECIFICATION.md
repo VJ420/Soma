@@ -83,7 +83,7 @@ SpawnStmt       ::= "spawn" ":" Block
 
 ## 3. Multi-Tier Execution Pipeline
 
-Fractal employs a four-tier compilation and execution pipeline designed to guarantee both instant interactive development and raw bare-metal hardware saturation.
+Soma has one syntax and four ways to run it: the in-process interpreter, the bytecode machine, the V8 translator used by `soma run`, and a C++ source emitter. The V8 path is the fast everyday engine. It is not a claim of matching Rust.
 
 ```
        [ Source Code (.fc) ]
@@ -121,7 +121,7 @@ Fractal employs a four-tier compilation and execution pipeline designed to guara
 ### Tier 3: High-Throughput JIT Engine
 - Transpiles directly into ES2024 V8 bytecode with TurboFan JIT optimization.
 - Generates unboxed `Float64Array` typed storage for arithmetic matrices.
-- Delivers **50x - 1,100x speedups** over CPython.
+- This is the engine behind `soma run`. It is in the same performance class as JavaScript. It is not a measured win over Rust or C++.
 
 ### Tier 4: Beast Native AOT Vectorizer (C++20 SIMD)
 - Emits clean ISO C++20 code.

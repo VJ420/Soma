@@ -22,6 +22,21 @@ max_of(lst):
         best = item
     best
 
+average(lst):
+  if len(lst) == 0: none
+  else: sum(lst) / len(lst)
+
+min(lst): min_of(lst)
+max(lst): max_of(lst)
+
+reverse(lst):
+  out = []
+  i = len(lst) - 1
+  while i >= 0:
+    push(out, lst[i])
+    i = i - 1
+  out
+
 min_of(lst):
   if len(lst) == 0: none
   else:

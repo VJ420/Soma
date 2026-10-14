@@ -20,6 +20,26 @@ gcd(a, b):
     a = t
   a
 
+abs(x):
+  if x < 0: 0 - x
+  else: x
+
+min(a, b):
+  if a < b: a
+  else: b
+
+max(a, b):
+  if a > b: a
+  else: b
+
+square(x): x * x
+
+circle_area(r): pi * r * r
+
+factorial(n):
+  if n <= 1: 1
+  else: n * factorial(n - 1)
+
 is_prime(n):
   if n <= 1: false
   else:
