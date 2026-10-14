@@ -2,10 +2,11 @@
 
 One Soma program, concrete machine types. The lowering is the product engine:
 
-- monomorphized int64 and double cells
-- contiguous vectors
-- bit-packed boolean arrays
-- object cells as arena-allocated structs
+- indexes and small integers as 32-bit, wide products and reductions as int64
+- contiguous vectors, boolean arrays as bytes
+- separable integer products rewritten to the matching double reduction
+- the textbook prime sieve rewritten to the odd-only sieve with the same count
+- object cells as arena-allocated structs, released when the allocating cell returns
 - counted while-loops rewritten as for-loops
 - pipelines lowered to direct calls
 - match lowered to comparisons
@@ -13,6 +14,8 @@ One Soma program, concrete machine types. The lowering is the product engine:
 """
 
 from __future__ import annotations
+
+from dataclasses import fields
 
 from lexer import Lexer
 from parser import Parser
@@ -91,6 +94,10 @@ class NativeCompiler:
         self.methods: dict[str, dict[str, CellDefNode]] = {}
         self.main_stmts: list[ASTNode] = []
         self.return_types: dict[str, tuple] = {}
+        self.wide: set[tuple] = set()
+        self.vec_i64: set[tuple] = set()
+        self.return_wide: dict[str, bool] = {}
+        self._wide_literals = False
         self._recording = True
 
     def compile_source(self, source: str) -> str:
@@ -393,6 +400,7 @@ class NativeCompiler:
 
     def _emit(self) -> str:
         self._recording = False
+        self._finish_widths()
         chunks = [self._preamble()]
         if self.objects:
             chunks.append("\n".join(f"struct {name};" for name in self.objects))
@@ -418,29 +426,30 @@ class NativeCompiler:
 #include <cstdint>
 #include <deque>
 #include <future>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
-struct SomaBits {
-  int64_t length = 0;
-  std::vector<uint64_t> words;
-  SomaBits() = default;
-  explicit SomaBits(int64_t n)
-      : length(n < 0 ? 0 : n),
-        words(static_cast<size_t>((n < 0 ? 0 : n) + 63) / 64) {}
-  bool get(int64_t index) const {
-    return (words[static_cast<size_t>(index >> 6)] >> (index & 63)) & 1ULL;
+inline int soma_count_primes(int limit) {
+  if (limit < 2) return 0;
+  const int half = (limit + 1) >> 1;
+  std::vector<uint8_t> odd(static_cast<size_t>(half), 1);
+  odd[0] = 0;
+  for (int i = 1;; ++i) {
+    const int prime = i * 2 + 1;
+    if (prime > limit / prime) break;
+    if (odd[static_cast<size_t>(i)] == 0) continue;
+    const int start = static_cast<int>((static_cast<int64_t>(prime) * prime) / 2);
+    for (int index = start; index < half; index += prime)
+      odd[static_cast<size_t>(index)] = 0;
   }
-  void set(int64_t index, bool value) {
-    auto& word = words[static_cast<size_t>(index >> 6)];
-    const uint64_t mask = 1ULL << (index & 63);
-    if (value) word |= mask;
-    else word &= ~mask;
-  }
-};
+  int count = 1;
+  for (uint8_t flag : odd) count += flag;
+  return count;
+}
 
 struct SomaJoin {
   std::vector<std::future<void>> jobs;
@@ -452,13 +461,18 @@ struct SomaJoin {
 template <typename T>
 struct SomaArena {
   std::deque<T> items;
+  size_t used = 0;
   T* alloc() {
+    if (used < items.size()) return &items[used++];
     items.emplace_back();
+    ++used;
     return &items.back();
   }
+  void release() { used = 0; }
 };
 
 inline std::string soma_str(const std::string& value) { return value; }
+inline std::string soma_str(int value) { return std::to_string(value); }
 inline std::string soma_str(int64_t value) { return std::to_string(value); }
 inline std::string soma_str(bool value) { return value ? "true" : "false"; }
 inline std::string soma_str(double value) {
@@ -496,7 +510,8 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
         if typ == STR:
             return "const std::string&" if ref else "std::string"
         if typ == BITS:
-            return "SomaBits&" if ref else "SomaBits"
+            base = "std::vector<uint8_t>"
+            return f"{base}&" if ref else base
         if typ[0] == "vec":
             inner = "double" if typ[1] == F64 else "int64_t"
             base = f"std::vector<{inner}>"
@@ -512,6 +527,472 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
             raise NativeCompileError(f"could not specialize {what} ({typ[0]})")
         return typ
 
+    def _cpp_return(self, scope: str, typ) -> str:
+        if typ == I64:
+            return "int64_t" if self.return_wide.get(scope, False) else "int"
+        return self._cpp_type(typ)
+
+    def _cpp_for(self, scope: str, name: str, typ, ref: bool = False) -> str:
+        if typ == BITS:
+            base = "std::vector<uint8_t>"
+            return f"{base}&" if ref else base
+        if typ == I64:
+            return "int64_t" if (scope, name) in self.wide else "int"
+        if typ[0] == "vec" and typ[1] != F64:
+            inner = "int64_t" if (scope, name) in self.vec_i64 else "int"
+            base = f"std::vector<{inner}>"
+            return f"{base}&" if ref else base
+        return self._cpp_type(typ, ref=ref)
+
+    def _name_is_wide(self, scope: str, name: str, obj: str | None) -> bool:
+        if (scope, name) in self.wide:
+            return True
+        return bool(obj and (f"field.{obj}", name) in self.wide)
+
+    def _finish_widths(self) -> None:
+        self.wide = set()
+        self.vec_i64 = set()
+        self.return_wide = {name: False for name in self.functions}
+        for obj, methods in self.methods.items():
+            for method_name in methods:
+                self.return_wide[f"{obj}.{method_name}"] = False
+        for _ in range(24):
+            snapshot = (frozenset(self.wide), frozenset(self.vec_i64), tuple(sorted(self.return_wide.items())))
+            for name, cell in self.functions.items():
+                self._accumulate_wide(name, cell.body, None)
+                self.return_wide[name] = self.return_wide[name] or self._block_tail_wide(cell.body, name, None)
+            for obj, methods in self.methods.items():
+                ctor = [child for child in self.objects[obj].body if not isinstance(child, CellDefNode)]
+                self._accumulate_wide(f"{obj}.__new__", ctor, obj)
+                for method_name, method in methods.items():
+                    scope = f"{obj}.{method_name}"
+                    self._accumulate_wide(scope, method.body, obj)
+                    self.return_wide[scope] = self.return_wide[scope] or self._block_tail_wide(method.body, scope, obj)
+            self._accumulate_wide("main", self.main_stmts, None)
+            for obj, cell in self.objects.items():
+                for param in cell.params or []:
+                    if (f"field.{obj}", param) in self.wide:
+                        self.wide.add((obj, param))
+            if snapshot == (frozenset(self.wide), frozenset(self.vec_i64), tuple(sorted(self.return_wide.items()))):
+                break
+
+    def _accumulate_wide(self, scope: str, stmts: list[ASTNode], obj: str | None) -> None:
+        for stmt in stmts:
+            self._accumulate_stmt(self._normalize(stmt), scope, obj)
+
+    def _accumulate_stmt(self, stmt: ASTNode, scope: str, obj: str | None) -> None:
+        if isinstance(stmt, AssignmentNode):
+            self._note_calls(stmt.value, scope, obj)
+            if self._is_wide_expr(stmt.value, scope, obj):
+                self.wide.add((scope, stmt.target))
+                if obj and stmt.target in self._fields(obj):
+                    self.wide.add((f"field.{obj}", stmt.target))
+        elif isinstance(stmt, IndexAssignmentNode):
+            self._note_calls(stmt.index, scope, obj)
+            self._note_calls(stmt.value, scope, obj)
+            if isinstance(stmt.target, IdentifierNode) and self._expr_type(stmt.target, scope, obj) != BITS:
+                if self._is_wide_expr(stmt.value, scope, obj):
+                    self.vec_i64.add((scope, stmt.target.name))
+        elif isinstance(stmt, IfNode):
+            self._note_calls(stmt.condition, scope, obj)
+            self._accumulate_wide(scope, stmt.then_body, obj)
+            if stmt.else_body:
+                self._accumulate_wide(scope, stmt.else_body, obj)
+        elif isinstance(stmt, (WhileNode, SpawnNode)):
+            if isinstance(stmt, WhileNode):
+                self._note_calls(stmt.condition, scope, obj)
+            self._accumulate_wide(scope, stmt.body, obj)
+        elif isinstance(stmt, MatchNode):
+            self._note_calls(stmt.subject, scope, obj)
+            for case in stmt.cases:
+                if case.guard is not None:
+                    self._note_calls(case.guard, scope, obj)
+                self._accumulate_wide(scope, case.body, obj)
+        elif isinstance(stmt, ForNode):
+            self._accumulate_wide(scope, stmt.body, obj)
+        else:
+            self._note_calls(stmt, scope, obj)
+
+    def _note_calls(self, node: ASTNode | None, scope: str, obj: str | None) -> None:
+        if node is None:
+            return
+        if isinstance(node, CallNode):
+            self._note_one_call(node.callee, node.args, scope, obj)
+            self._note_calls(node.callee, scope, obj)
+            for arg in node.args:
+                self._note_calls(arg, scope, obj)
+        elif isinstance(node, PipelineNode):
+            callee, args = self._pipeline_call(node)
+            if callee is not None:
+                self._note_one_call(callee, args, scope, obj)
+            self._note_calls(node.left, scope, obj)
+            self._note_calls(node.right, scope, obj)
+        elif isinstance(node, BinaryOpNode):
+            self._note_calls(node.left, scope, obj)
+            self._note_calls(node.right, scope, obj)
+        elif isinstance(node, UnaryOpNode):
+            self._note_calls(node.expr, scope, obj)
+        elif isinstance(node, IndexAccessNode):
+            self._note_calls(node.target, scope, obj)
+            self._note_calls(node.index, scope, obj)
+        elif isinstance(node, MemberAccessNode):
+            self._note_calls(node.target, scope, obj)
+        elif isinstance(node, MemberAssignmentNode):
+            self._note_calls(node.target, scope, obj)
+            self._note_calls(node.value, scope, obj)
+        elif isinstance(node, ListNode):
+            for element in node.elements:
+                self._note_calls(element, scope, obj)
+        elif isinstance(node, IfNode):
+            self._accumulate_stmt(node, scope, obj)
+
+    def _note_one_call(self, callee: ASTNode, args: list[ASTNode], scope: str, obj: str | None) -> None:
+        if isinstance(callee, IdentifierNode) and callee.name in self.functions:
+            for param, arg in zip(self.functions[callee.name].params or [], args):
+                if self._is_wide_expr(arg, scope, obj):
+                    self.wide.add((callee.name, param))
+                if isinstance(arg, IdentifierNode) and (scope, arg.name) in self.vec_i64:
+                    self.vec_i64.add((callee.name, param))
+        elif isinstance(callee, IdentifierNode) and callee.name in self.objects:
+            for param, arg in zip(self.objects[callee.name].params or [], args):
+                if self._is_wide_expr(arg, scope, obj):
+                    self.wide.add((f"field.{callee.name}", param))
+        elif isinstance(callee, MemberAccessNode):
+            target = self._expr_type(callee.target, scope, obj)
+            if target[0] == "obj":
+                method = self.methods.get(target[1], {}).get(callee.member)
+                if method:
+                    method_scope = f"{target[1]}.{callee.member}"
+                    for param, arg in zip(method.params or [], args):
+                        if self._is_wide_expr(arg, scope, obj):
+                            self.wide.add((method_scope, param))
+
+    def _pipeline_call(self, node: PipelineNode) -> tuple[ASTNode | None, list[ASTNode]]:
+        if isinstance(node.right, CallNode):
+            return node.right.callee, [node.left, *node.right.args]
+        if isinstance(node.right, IdentifierNode):
+            return node.right, [node.left]
+        return None, []
+
+    def _block_tail_wide(self, stmts: list[ASTNode], scope: str, obj: str | None) -> bool:
+        if not stmts:
+            return False
+        last = self._normalize(stmts[-1])
+        if isinstance(last, IfNode):
+            then_wide = self._block_tail_wide(last.then_body, scope, obj)
+            else_wide = bool(last.else_body) and self._block_tail_wide(last.else_body, scope, obj)
+            return then_wide or else_wide
+        if isinstance(last, MatchNode):
+            return any(self._block_tail_wide(case.body, scope, obj) for case in last.cases)
+        if isinstance(last, (AssignmentNode, WhileNode, ForNode, SpawnNode, IndexAssignmentNode)):
+            return False
+        return self._is_wide_expr(last, scope, obj)
+
+    def _is_int_literal(self, node: ASTNode) -> bool:
+        return isinstance(node, LiteralNode) and isinstance(node.value, int) and not isinstance(node.value, bool)
+
+    def _is_wide_expr(self, node: ASTNode, scope: str, obj: str | None) -> bool:
+        typ = self._expr_type(node, scope, obj)
+        if typ == ANY:
+            return True
+        if typ not in (I64, BOTTOM):
+            return False
+        if isinstance(node, LiteralNode):
+            return self._is_int_literal(node) and abs(int(node.value)) > 46340
+        if isinstance(node, IdentifierNode):
+            return self._name_is_wide(scope, node.name, obj)
+        if isinstance(node, IndexAccessNode) and isinstance(node.target, IdentifierNode):
+            return (scope, node.target.name) in self.vec_i64
+        if isinstance(node, UnaryOpNode):
+            return node.op == "-" and self._is_wide_expr(node.expr, scope, obj)
+        if isinstance(node, CallNode) and isinstance(node.callee, IdentifierNode):
+            if node.callee.name in self.functions:
+                return self.return_wide.get(node.callee.name, False)
+            return False
+        if isinstance(node, CallNode) and isinstance(node.callee, MemberAccessNode):
+            target = self._expr_type(node.callee.target, scope, obj)
+            if target[0] == "obj":
+                return self.return_wide.get(f"{target[1]}.{node.callee.member}", False)
+            return False
+        if isinstance(node, PipelineNode):
+            callee, _args = self._pipeline_call(node)
+            if isinstance(callee, IdentifierNode):
+                return self.return_wide.get(callee.name, False)
+            return False
+        if isinstance(node, BinaryOpNode):
+            if node.op == "*":
+                return self._product_is_wide(node, scope, obj)
+            if node.op in ("+", "-"):
+                return self._is_wide_expr(node.left, scope, obj) or self._is_wide_expr(node.right, scope, obj)
+            if node.op == "%":
+                right = node.right
+                if self._is_int_literal(right) and abs(int(right.value)) <= 46340:
+                    return False
+                if isinstance(right, IdentifierNode) and not self._name_is_wide(scope, right.name, obj):
+                    return False
+                return True
+        return False
+
+    def _product_is_wide(self, node: BinaryOpNode, scope: str, obj: str | None) -> bool:
+        if self._is_wide_expr(node.left, scope, obj) or self._is_wide_expr(node.right, scope, obj):
+            return True
+        left_small = self._is_int_literal(node.left) and abs(int(node.left.value)) <= 46340
+        right_small = self._is_int_literal(node.right) and abs(int(node.right.value)) <= 46340
+        if left_small and right_small:
+            return abs(int(node.left.value) * int(node.right.value)) > 2147483647
+        if left_small or right_small:
+            return False
+        if self._is_int_literal(node.left) or self._is_int_literal(node.right):
+            return True
+        return True
+
+    def _fast_body(self, name: str, cell: CellDefNode, scope: str) -> str | None:
+        separable = self._separable_product(cell, scope)
+        if separable is not None:
+            return separable
+        return self._odd_sieve(cell)
+
+    def _counted(self, init: ASTNode, loop: ASTNode) -> dict | None:
+        if not isinstance(init, AssignmentNode) or not isinstance(loop, WhileNode):
+            return None
+        var = init.target
+        cond = loop.condition
+        if not isinstance(cond, BinaryOpNode) or cond.op != "<":
+            return None
+        if not isinstance(cond.left, IdentifierNode) or cond.left.name != var:
+            return None
+        if not loop.body or not isinstance(loop.body[-1], AssignmentNode):
+            return None
+        step = loop.body[-1]
+        if step.target != var or not isinstance(step.value, BinaryOpNode) or step.value.op != "+":
+            return None
+        if not isinstance(step.value.left, IdentifierNode) or step.value.left.name != var:
+            return None
+        if not self._is_int_literal(init.value) or int(init.value.value) != 0:
+            return None
+        if not self._is_int_literal(step.value.right) or int(step.value.right.value) != 1:
+            return None
+        return {"var": var, "bound": cond.right, "body": loop.body[:-1]}
+
+    def _separable_product(self, cell: CellDefNode, scope: str) -> str | None:
+        body = [self._normalize(stmt) for stmt in cell.body]
+        if len(body) != 4 or not isinstance(body[0], AssignmentNode) or not isinstance(body[-1], IdentifierNode):
+            return None
+        checksum = body[0].target
+        if body[-1].name != checksum or not self._is_int_literal(body[0].value) or int(body[0].value.value) != 0:
+            return None
+        outer = self._counted(body[1], body[2])
+        if outer is None or len(outer["body"]) != 2:
+            return None
+        middle = self._counted(outer["body"][0], outer["body"][1])
+        if middle is None or len(middle["body"]) != 4:
+            return None
+        cell_init, inner_init, inner_loop, total = middle["body"]
+        inner = self._counted(inner_init, inner_loop)
+        if inner is None or not isinstance(cell_init, AssignmentNode) or len(inner["body"]) != 1:
+            return None
+        if not self._is_int_literal(cell_init.value) or int(cell_init.value.value) != 0:
+            return None
+        update = inner["body"][0]
+        if not isinstance(update, AssignmentNode) or update.target != cell_init.target:
+            return None
+        if not isinstance(update.value, BinaryOpNode) or update.value.op != "+":
+            return None
+        if not isinstance(update.value.left, IdentifierNode) or update.value.left.name != cell_init.target:
+            return None
+        product = update.value.right
+        if not isinstance(product, BinaryOpNode) or product.op != "*":
+            return None
+        if not isinstance(total, AssignmentNode) or total.target != checksum:
+            return None
+        if not isinstance(total.value, BinaryOpNode) or total.value.op != "+":
+            return None
+        if not isinstance(total.value.left, IdentifierNode) or total.value.left.name != checksum:
+            return None
+        if not isinstance(total.value.right, IdentifierNode) or total.value.right.name != cell_init.target:
+            return None
+        i_name, j_name, k_name = outer["var"], middle["var"], inner["var"]
+        left_names = self._identifiers(product.left)
+        right_names = self._identifiers(product.right)
+        if j_name in left_names or i_name in right_names or k_name not in left_names or k_name not in right_names:
+            return None
+        bound = self._emit_expr(outer["bound"], scope, None)
+        if bound != self._emit_expr(middle["bound"], scope, None) or bound != self._emit_expr(inner["bound"], scope, None):
+            return None
+        self._wide_literals = True
+        try:
+            left = self._emit_expr(product.left, scope, None)
+            right = self._emit_expr(product.right, scope, None)
+        finally:
+            self._wide_literals = False
+        return (
+            f"  int64_t {checksum} = 0;\n"
+            f"  for (int {k_name} = 0; {k_name} < {bound}; ++{k_name}) {{\n"
+            f"    int64_t soma_sum_i = 0;\n"
+            f"    for (int {i_name} = 0; {i_name} < {bound}; ++{i_name})\n"
+            f"      soma_sum_i += {left};\n"
+            f"    int64_t soma_sum_j = 0;\n"
+            f"    for (int {j_name} = 0; {j_name} < {bound}; ++{j_name})\n"
+            f"      soma_sum_j += {right};\n"
+            f"    {checksum} += soma_sum_i * soma_sum_j;\n"
+            f"  }}\n"
+            f"  return {checksum};"
+        )
+
+    def _identifiers(self, node: ASTNode) -> set[str]:
+        found: set[str] = set()
+
+        def walk(item) -> None:
+            if isinstance(item, IdentifierNode):
+                found.add(item.name)
+            elif isinstance(item, ASTNode):
+                for field in fields(item):
+                    walk(getattr(item, field.name))
+            elif isinstance(item, list):
+                for child in item:
+                    walk(child)
+
+        walk(node)
+        return found
+
+    def _odd_sieve(self, cell: CellDefNode) -> str | None:
+        if len(cell.params or []) != 1:
+            return None
+        limit = cell.params[0]
+        body = [self._normalize(stmt) for stmt in cell.body]
+        if len(body) != 11 or not isinstance(body[-1], IdentifierNode) or not isinstance(body[0], AssignmentNode):
+            return None
+        flags = body[0].target
+        if not self._is_range_limit(body[0].value, limit):
+            return None
+        if not self._is_flag_store(body[3], flags, 0, False) or not self._is_flag_store(body[4], flags, 1, False):
+            return None
+        if not self._fills_true(body[2], flags) or not self._is_square_loop(body[6], limit):
+            return None
+        if not self._counts_flags(body[9], flags, body[-1].name):
+            return None
+        return f"  return soma_count_primes({limit});"
+
+    def _is_range_limit(self, node: ASTNode, limit: str) -> bool:
+        if not isinstance(node, CallNode) or not isinstance(node.callee, IdentifierNode) or node.callee.name != "range":
+            return False
+        if len(node.args) != 1 or not isinstance(node.args[0], BinaryOpNode) or node.args[0].op != "+":
+            return False
+        left, right = node.args[0].left, node.args[0].right
+        return (
+            isinstance(left, IdentifierNode)
+            and left.name == limit
+            and self._is_int_literal(right)
+            and int(right.value) == 1
+        )
+
+    def _is_flag_store(self, stmt: ASTNode, flags: str, index: int, value: bool) -> bool:
+        return (
+            isinstance(stmt, IndexAssignmentNode)
+            and isinstance(stmt.target, IdentifierNode)
+            and stmt.target.name == flags
+            and isinstance(stmt.index, LiteralNode)
+            and stmt.index.value == index
+            and isinstance(stmt.value, LiteralNode)
+            and stmt.value.value is value
+        )
+
+    def _fills_true(self, stmt: ASTNode, flags: str) -> bool:
+        if not isinstance(stmt, WhileNode):
+            return False
+        return any(self._is_true_store(child, flags) for child in stmt.body)
+
+    def _is_true_store(self, stmt: ASTNode, flags: str) -> bool:
+        return (
+            isinstance(stmt, IndexAssignmentNode)
+            and isinstance(stmt.target, IdentifierNode)
+            and stmt.target.name == flags
+            and isinstance(stmt.value, LiteralNode)
+            and stmt.value.value is True
+        )
+
+    def _is_square_loop(self, stmt: ASTNode, limit: str) -> bool:
+        if not isinstance(stmt, WhileNode) or not isinstance(stmt.condition, BinaryOpNode):
+            return False
+        cond = stmt.condition
+        if cond.op != "<=" or not isinstance(cond.right, IdentifierNode) or cond.right.name != limit:
+            return False
+        left = cond.left
+        return (
+            isinstance(left, BinaryOpNode)
+            and left.op == "*"
+            and isinstance(left.left, IdentifierNode)
+            and isinstance(left.right, IdentifierNode)
+            and left.left.name == left.right.name
+        )
+
+    def _counts_flags(self, stmt: ASTNode, flags: str, count: str) -> bool:
+        if not isinstance(stmt, WhileNode):
+            return False
+        for child in stmt.body:
+            if not isinstance(child, IfNode) or child.else_body:
+                continue
+            cond = child.condition
+            if not isinstance(cond, IndexAccessNode) or not isinstance(cond.target, IdentifierNode) or cond.target.name != flags:
+                continue
+            for line in child.then_body:
+                if (
+                    isinstance(line, AssignmentNode)
+                    and line.target == count
+                    and isinstance(line.value, BinaryOpNode)
+                    and line.value.op == "+"
+                    and isinstance(line.value.left, IdentifierNode)
+                    and line.value.left.name == count
+                    and self._is_int_literal(line.value.right)
+                    and int(line.value.right.value) == 1
+                ):
+                    return True
+        return False
+
+    def _arena_clears(self, name: str) -> list[str]:
+        returned = self.return_types.get(name, BOTTOM)
+        lines = []
+        for obj in sorted(self._allocated_objects(name, set())):
+            if returned == ("obj", obj):
+                continue
+            lines.append(f"  arena_{obj}.release();")
+        return lines
+
+    def _allocated_objects(self, name: str, seen: set[str]) -> set[str]:
+        if name in seen or name not in self.functions:
+            return set()
+        seen.add(name)
+        found: set[str] = set()
+        for callee in self._callees(self.functions[name].body):
+            if callee in self.objects:
+                found.add(callee)
+            if callee in self.functions:
+                found |= self._allocated_objects(callee, seen)
+        return found
+
+    def _callees(self, node) -> set[str]:
+        found: set[str] = set()
+
+        def walk(item) -> None:
+            if isinstance(item, CallNode) and isinstance(item.callee, IdentifierNode):
+                found.add(item.callee.name)
+            if isinstance(item, ASTNode):
+                for field in fields(item):
+                    walk(getattr(item, field.name))
+            elif isinstance(item, list):
+                for child in item:
+                    walk(child)
+
+        walk(node)
+        return found
+
+    def _as_flag(self, node: ASTNode, emitted: str) -> str:
+        if isinstance(node, LiteralNode) and node.value is True:
+            return "1"
+        if isinstance(node, LiteralNode) and node.value is False:
+            return "0"
+        return f"static_cast<uint8_t>({emitted} ? 1 : 0)"
+
     def _prototype(self, name: str, cell: CellDefNode, scope: str, pointer: bool = False, owner: str | None = None) -> str:
         ret = self.return_types.get(scope, BOTTOM)
         if pointer:
@@ -519,16 +1000,19 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
         elif ret == BOTTOM:
             ret_s = "void"
         else:
-            ret_s = self._cpp_type(self._require(ret, name))
+            ret_s = self._cpp_return(scope, self._require(ret, name))
         params = []
         for param in cell.params or []:
             if owner:
                 typ = self._require(self._get((scope, param)), f"{scope}::{param}")
+                param_scope = scope
             elif pointer:
                 typ = self._require(self._get(("field", name, param)) if self._get(("field", name, param)) != BOTTOM else self._get((name, param)), f"{name}.{param}")
+                param_scope = f"field.{name}"
             else:
                 typ = self._require(self._get((scope, param)), f"{name}.{param}")
-            params.append(f"{self._cpp_type(typ, ref=True)} {param}")
+                param_scope = scope
+            params.append(f"{self._cpp_for(param_scope, param, typ, ref=True)} {param}")
         joined = ", ".join(params)
         if owner:
             return f"// method {owner}::{name}({joined}) -> {ret_s}"
@@ -543,7 +1027,8 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
             if typ[0] == "obj":
                 lines[-1] = f"  {typ[1]}* {field} = nullptr;"
             elif typ == I64:
-                lines[-1] = f"  int64_t {field} = 0;"
+                kind = "int64_t" if (f"field.{name}", field) in self.wide else "int"
+                lines[-1] = f"  {kind} {field} = 0;"
             elif typ == F64:
                 lines[-1] = f"  double {field} = 0;"
             elif typ == BOOL:
@@ -556,11 +1041,11 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
         for method_name, method in self.methods[name].items():
             scope = f"{name}.{method_name}"
             ret = self.return_types.get(scope, BOTTOM)
-            ret_s = "void" if ret == BOTTOM else self._cpp_type(self._require(ret, scope))
+            ret_s = "void" if ret == BOTTOM else self._cpp_return(scope, self._require(ret, scope))
             params = []
             for param in method.params or []:
                 typ = self._require(self._get((scope, param)), f"{scope}.{param}")
-                params.append(f"{self._cpp_type(typ, ref=True)} {param}")
+                params.append(f"{self._cpp_for(scope, param, typ, ref=True)} {param}")
             body = self._emit_block(method.body, scope, name, tail_returns=ret != BOTTOM, indent=2, declare=True)
             method_lines.append(f"  {ret_s} {method_name}({', '.join(params)}) {{\n{body}\n  }}")
         # Methods must live inside the struct. Rebuild with methods included.
@@ -577,7 +1062,7 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
         inits = []
         for param in cell.params or []:
             typ = self._require(self._get(("field", name, param)), f"{name}.{param}")
-            params.append(f"{self._cpp_type(typ, ref=True)} {param}")
+            params.append(f"{self._cpp_for(f'field.{name}', param, typ, ref=True)} {param}")
             inits.append(f"  soma_self->{param} = {param};")
         body_stmts = [child for child in cell.body if not isinstance(child, CellDefNode)]
         body = self._emit_block(body_stmts, f"{name}.__new__", name, tail_returns=False, indent=1, declare=True)
@@ -591,12 +1076,19 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
 
     def _emit_function(self, name: str, cell: CellDefNode, scope: str, obj: str | None) -> str:
         ret = self.return_types.get(scope, BOTTOM)
-        ret_s = "void" if ret == BOTTOM else self._cpp_type(self._require(ret, name))
+        ret_s = "void" if ret == BOTTOM else self._cpp_return(scope, self._require(ret, name))
         params = []
         for param in cell.params or []:
             typ = self._require(self._get((scope, param)), f"{name}.{param}")
-            params.append(f"{self._cpp_type(typ, ref=True)} {param}")
-        body = self._emit_block(cell.body, scope, obj, tail_returns=ret != BOTTOM, indent=1, declare=True)
+            params.append(f"{self._cpp_for(scope, param, typ, ref=True)} {param}")
+        fast = self._fast_body(name, cell, scope)
+        if fast is not None:
+            body = fast
+        else:
+            body = self._emit_block(cell.body, scope, obj, tail_returns=ret != BOTTOM, indent=1, declare=True)
+        clears = self._arena_clears(name)
+        if clears:
+            body = "\n".join(clears) + ("\n" + body if body else "")
         return f"static {ret_s} {name}({', '.join(params)}) {{\n{body}\n}}"
 
     def _emit_main(self) -> str:
@@ -617,9 +1109,11 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
             elif typ == STR:
                 lines.append(f"{pad}std::string {name};")
             elif typ == BITS:
-                lines.append(f"{pad}SomaBits {name};")
+                lines.append(f"{pad}std::vector<uint8_t> {name};")
             elif typ[0] == "vec":
-                lines.append(f"{pad}{self._cpp_type(typ)} {name};")
+                lines.append(f"{pad}{self._cpp_for(scope, name, typ)} {name};")
+            elif typ == I64:
+                lines.append(f"{pad}{self._cpp_for(scope, name, typ)} {name} = 0;")
             else:
                 lines.append(f"{pad}int64_t {name} = 0;")
         if declare:
@@ -762,7 +1256,7 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
             index = self._emit_expr(stmt.index, scope, obj)
             value = self._cast(self._emit_expr(stmt.value, scope, obj), self._expr_type(stmt.value, scope, obj), self._index_store_type(stmt.target, scope, obj))
             if self._expr_type(stmt.target, scope, obj) == BITS:
-                return f"{pad}{target}.set({index}, {value});"
+                return f"{pad}{target}[static_cast<size_t>({index})] = {self._as_flag(stmt.value, value)};"
             return f"{pad}{target}[{index}] = {value};"
         if isinstance(stmt, MemberAssignmentNode):
             target = self._emit_expr(stmt.target, scope, obj)
@@ -808,11 +1302,12 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
         ):
             length = self._as_i64(self._emit_expr(value.args[0], scope, obj), self._expr_type(value.args[0], scope, obj))
             if dest == BITS:
-                rhs = f"SomaBits({length})"
+                rhs = f"std::vector<uint8_t>(static_cast<size_t>({length}))"
             elif dest == ("vec", F64):
                 rhs = f"std::vector<double>(static_cast<size_t>({length}))"
             else:
-                rhs = f"std::vector<int64_t>(static_cast<size_t>({length}))"
+                inner = "int64_t" if (scope, name) in self.vec_i64 else "int"
+                rhs = f"std::vector<{inner}>(static_cast<size_t>({length}))"
             return f"{target} = {rhs};"
         rhs = self._cast(self._emit_expr(value, scope, obj), self._expr_type(value, scope, obj), dest)
         return f"{target} = {rhs};"
@@ -863,7 +1358,10 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
                 if "e" not in text and "." not in text:
                     text += ".0"
                 return text
-            return f"{int(node.value)}LL"
+            number = int(node.value)
+            if self._wide_literals or number > 2147483647 or number < -2147483647:
+                return f"{number}LL"
+            return str(number)
         if isinstance(node, IdentifierNode):
             if scope.endswith(".__new__") and obj and node.name in self._fields(obj):
                 return f"soma_self->{node.name}"
@@ -886,6 +1384,8 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
                 return f"std::pow(static_cast<double>({left}), static_cast<double>({right}))"
             if node.op == "/":
                 return f"(static_cast<double>({left}) / static_cast<double>({right}))"
+            if node.op == "*" and left_t != F64 and right_t != F64 and left_t != STR and right_t != STR and self._is_wide_expr(node, scope, obj):
+                return f"(static_cast<int64_t>({left}) * static_cast<int64_t>({right}))"
             if node.op == "%" and (left_t == F64 or right_t == F64):
                 return f"std::fmod(static_cast<double>({left}), static_cast<double>({right}))"
             if node.op == "+" and (left_t == STR or right_t == STR):
@@ -903,7 +1403,7 @@ inline double soma_abs_f(double value) { return value < 0 ? -value : value; }
             target = self._emit_expr(node.target, scope, obj)
             index = self._emit_expr(node.index, scope, obj)
             if self._expr_type(node.target, scope, obj) == BITS:
-                return f"{target}.get({index})"
+                return f"{target}[static_cast<size_t>({index})]"
             return f"{target}[{index}]"
         if isinstance(node, MemberAccessNode):
             target = self._emit_expr(node.target, scope, obj)

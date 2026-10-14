@@ -29,11 +29,22 @@ def render(workload, size, iterations):
 class TestNativeLowering(unittest.TestCase):
     def test_template_uses_native_representations(self):
         cpp = NativeCompiler().compile_source(render("sieve", 100, 1))
-        self.assertIn("struct SomaBits", cpp)
+        self.assertIn("soma_count_primes", cpp)
+        self.assertIn("std::vector<uint8_t>", cpp)
+        self.assertNotIn("SomaBits", cpp)
         self.assertIn("SomaArena<TreeNode>", cpp)
         self.assertIn("for (", cpp)
         self.assertNotIn("std::function", cpp)
         self.assertNotIn("exceeds", cpp.lower())
+        matmul = NativeCompiler().compile_source(render("matmul", 8, 1))
+        self.assertIn("soma_sum_i", matmul)
+        self.assertIn("soma_sum_j", matmul)
+        self.assertNotIn("matrix_cell", matmul)
+        trees = NativeCompiler().compile_source(render("binarytrees", 4, 1))
+        self.assertEqual(trees.count("arena_TreeNode.release()"), 1)
+        sort = NativeCompiler().compile_source(render("sort", 30, 1))
+        self.assertIn("48271", sort)
+        self.assertIn("int64_t state", sort)
 
     def test_cells_pipeline_match_and_objects_lower(self):
         cpp = NativeCompiler().compile_source(

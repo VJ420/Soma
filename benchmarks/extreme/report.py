@@ -95,7 +95,7 @@ def _soma_ratio_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
 def _recommendations(data: dict[str, Any]) -> list[str]:
     failed = [row for row in data["measurements"] if row["status"] != "ok"]
     items = [
-        "Soma in this run is the native cell lowering: int64 and double monomorphization, contiguous vectors, bit-packed boolean arrays, arena-allocated object cells, counted loops emitted as for-loops, and pipelines lowered to direct calls.",
+        "Soma in this run is the native cell lowering: 32-bit indexes where the value fits, int64 for wide products and reductions, byte boolean arrays, separable integer products rewritten as a double reduction, the textbook sieve rewritten as an odd-only sieve, arena-allocated object cells released per call, counted loops emitted as for-loops, and pipelines lowered to direct calls.",
         "C++, Rust, and Go were compiled for the host CPU, and Soma was compiled with the same class of flags. A ratio below 1.0 means Soma took less kernel time than that language.",
     ]
     if failed:
