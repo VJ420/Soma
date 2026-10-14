@@ -209,6 +209,167 @@ def stencil(grid: int) -> float:
     return sum(value * (index + 1) for index, value in enumerate(current))
 
 
+MOD = 1_000_000_007
+INF = 1_000_000_000
+
+
+def dijkstra(n: int) -> int:
+    dist = [INF] * n
+    used = [0] * n
+    dist[0] = 0
+    for _ in range(n):
+        selected = 0
+        best = INF
+        found = 0
+        for index in range(n):
+            if used[index] == 0 and dist[index] < best:
+                best = dist[index]
+                selected = index
+                found = 1
+        if found == 1:
+            used[selected] = 1
+            for vertex in range(n):
+                if used[vertex] == 0 and selected != vertex:
+                    weight = (selected * 17 + vertex * 13) % 97 + 1
+                    candidate = dist[selected] + weight
+                    if candidate < dist[vertex]:
+                        dist[vertex] = candidate
+    checksum = 0
+    for index, value in enumerate(dist):
+        checksum = (checksum + value * (index + 1)) % MOD
+    return checksum
+
+
+def floyd(n: int) -> int:
+    dist = [0] * (n * n)
+    for row in range(n):
+        for column in range(n):
+            if row == column:
+                dist[row * n + column] = 0
+            else:
+                dist[row * n + column] = (row * 17 + column * 13) % 97 + 1
+    for via in range(n):
+        for row in range(n):
+            via_cost = dist[row * n + via]
+            for column in range(n):
+                candidate = via_cost + dist[via * n + column]
+                index = row * n + column
+                if candidate < dist[index]:
+                    dist[index] = candidate
+    checksum = 0
+    for index, value in enumerate(dist):
+        checksum = (checksum + value * (index + 1)) % MOD
+    return checksum
+
+
+def knapsack(n: int) -> int:
+    best = [0] * (n + 1)
+    for item in range(1, n + 1):
+        weight = (item % 17) + 1
+        value = (item * 3) % 23 + 1
+        slot = n
+        while slot >= weight:
+            candidate = best[slot - weight] + value
+            if candidate > best[slot]:
+                best[slot] = candidate
+            slot -= 1
+    checksum = 0
+    for index, value in enumerate(best):
+        checksum = (checksum + value * (index + 1)) % MOD
+    return checksum
+
+
+def editdist(n: int) -> int:
+    previous = list(range(n + 1))
+    current = [0] * (n + 1)
+    for row in range(1, n + 1):
+        current[0] = row
+        left_symbol = (row * 3) % 26
+        for column in range(1, n + 1):
+            cost = 0 if left_symbol == (column * 5) % 26 else 1
+            delete = previous[column] + 1
+            insert = current[column - 1] + 1
+            replace = previous[column - 1] + cost
+            choice = delete
+            if insert < choice:
+                choice = insert
+            if replace < choice:
+                choice = replace
+            current[column] = choice
+        previous, current = current, previous
+    checksum = 0
+    for index, value in enumerate(previous):
+        checksum = (checksum + value * (index + 1)) % MOD
+    return checksum
+
+
+def lis(n: int) -> int:
+    tails = [0] * n
+    length = 0
+    state = 1
+    for _ in range(n):
+        state = (state * 48271) % 2147483647
+        value = state % 1000003
+        low = 0
+        high = length
+        while low < high:
+            mid = (low + high) // 2
+            if tails[mid] < value:
+                low = mid + 1
+            else:
+                high = mid
+        if low == length:
+            tails[length] = value
+            length += 1
+        else:
+            tails[low] = value
+    checksum = 0
+    for index in range(length):
+        checksum = (checksum + tails[index] * (index + 1)) % MOD
+    return checksum
+
+
+def life(n: int) -> int:
+    cells = n * n
+    current = [0] * cells
+    nxt = [0] * cells
+    for index in range(n):
+        current[index * n + index] = 1
+        current[index * n + ((index * 3) % n)] = 1
+    for _ in range(12):
+        for y in range(n):
+            for x in range(n):
+                neighbors = 0
+                if y > 0 and x > 0 and current[(y - 1) * n + (x - 1)] == 1:
+                    neighbors += 1
+                if y > 0 and current[(y - 1) * n + x] == 1:
+                    neighbors += 1
+                if y > 0 and x + 1 < n and current[(y - 1) * n + (x + 1)] == 1:
+                    neighbors += 1
+                if x > 0 and current[y * n + (x - 1)] == 1:
+                    neighbors += 1
+                if x + 1 < n and current[y * n + (x + 1)] == 1:
+                    neighbors += 1
+                if y + 1 < n and x > 0 and current[(y + 1) * n + (x - 1)] == 1:
+                    neighbors += 1
+                if y + 1 < n and current[(y + 1) * n + x] == 1:
+                    neighbors += 1
+                if y + 1 < n and x + 1 < n and current[(y + 1) * n + (x + 1)] == 1:
+                    neighbors += 1
+                alive = current[y * n + x]
+                born = 0
+                if alive == 1 and (neighbors == 2 or neighbors == 3):
+                    born = 1
+                if alive == 0 and neighbors == 3:
+                    born = 1
+                nxt[y * n + x] = born
+        current, nxt = nxt, current
+    checksum = 0
+    for index, value in enumerate(current):
+        checksum += value * (index + 1)
+    return checksum
+
+
 def histogram(sample_count: int) -> int:
     bins = [0] * 1024
     state = 1
@@ -239,6 +400,12 @@ WORKLOADS = {
     "sort": mergesort,
     "stencil": stencil,
     "histogram": histogram,
+    "dijkstra": dijkstra,
+    "floyd": floyd,
+    "knapsack": knapsack,
+    "editdist": editdist,
+    "lis": lis,
+    "life": life,
 }
 
 

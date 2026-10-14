@@ -82,6 +82,48 @@
       "expected_time": "O(n)",
       "expected_space": "O(1)",
       "soma_vm": true
+    },
+    "dijkstra": {
+      "domain": "Dense shortest paths",
+      "sizes": [500, 900, 1400],
+      "expected_time": "O(n^2)",
+      "expected_space": "O(n)",
+      "soma_vm": false
+    },
+    "floyd": {
+      "domain": "All-pairs shortest paths",
+      "sizes": [48, 80, 120],
+      "expected_time": "O(n^3)",
+      "expected_space": "O(n^2)",
+      "soma_vm": false
+    },
+    "knapsack": {
+      "domain": "Zero-one dynamic programming",
+      "sizes": [800, 1400, 2200],
+      "expected_time": "O(n^2)",
+      "expected_space": "O(n)",
+      "soma_vm": false
+    },
+    "editdist": {
+      "domain": "String edit distance",
+      "sizes": [300, 550, 900],
+      "expected_time": "O(n^2)",
+      "expected_space": "O(n)",
+      "soma_vm": false
+    },
+    "lis": {
+      "domain": "Binary-search subsequence",
+      "sizes": [80000, 200000, 400000],
+      "expected_time": "O(n log n)",
+      "expected_space": "O(n)",
+      "soma_vm": false
+    },
+    "life": {
+      "domain": "Cellular automaton",
+      "sizes": [64, 112, 160],
+      "expected_time": "O(n^2)",
+      "expected_space": "O(n^2)",
+      "soma_vm": false
     }
   }
 }

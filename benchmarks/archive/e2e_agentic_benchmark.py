@@ -1,4 +1,5 @@
-"""
+"""Archived local probe. The published ranking is docs/MEASURED_PERFORMANCE.md.
+
 End-to-End Multi-Language Agentic Architecture Benchmark.
 Compares:
 1. Python (Standard sequential pipeline)
@@ -19,7 +20,7 @@ import os
 import json
 from concurrent.futures import ThreadPoolExecutor
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from agentic_infra import ParallelCellEngine, TaskDecomposer
 
 # Workload: 1,000,000 items decomposed into 4 parallel chunks with CPU intensive transform

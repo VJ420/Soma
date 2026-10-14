@@ -22,7 +22,7 @@ print("\n=== 2. Pipelines: Data Flows Effortlessly ===")
 
 print("\n=== 3. Objects / Classes Without Boilerplate ===")
 # In Python: class Person: def __init__(self, name, age): self.name = name ...
-# In Fractal: Just a Cell with inputs and internal methods!
+# In Soma: a cell with inputs and nested cells.
 Hero(name, role, power_level):
   describe():
     print("Hero: " + name + " [" + role + "] | Power: " + str(power_level))
@@ -42,4 +42,4 @@ for n in numbers:
 
 print("Sum of numbers:", sum)
 
-print("\n=== Done! Fractal is fast, recursive, and halwa to write! ===")
+print("\n=== Done. Soma is one cell, a pipeline, and a tail expression. ===")

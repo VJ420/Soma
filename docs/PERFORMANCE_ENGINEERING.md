@@ -2,7 +2,7 @@
 
 You write a cell. `soma run` compiles it when `g++` or `clang++` is on PATH, using `-O3 -std=c++20 -march=native`. Without a C++ compiler it runs on V8. `--engine interpreter` and `--engine vm` stay available. They are not the fast path.
 
-The measured ranking, the machine, and the per-task times are in [MEASURED_PERFORMANCE.md](MEASURED_PERFORMANCE.md). On that run Soma's geometric mean was 0.69× the fastest other language. The notes below are what the compiler actually emits.
+The measured ranking, the machine, and the per-task times are in [MEASURED_PERFORMANCE.md](MEASURED_PERFORMANCE.md). On the 17-task run Soma's geometric mean was 0.84× the fastest other language. The notes below are what the compiler actually emits.
 
 ## Representations
 

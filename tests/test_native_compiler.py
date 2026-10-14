@@ -45,6 +45,10 @@ class TestNativeLowering(unittest.TestCase):
         sort = NativeCompiler().compile_source(render("sort", 30, 1))
         self.assertIn("48271", sort)
         self.assertIn("int64_t state", sort)
+        for workload in ("dijkstra", "floyd", "knapsack", "editdist", "lis", "life"):
+            lowered = NativeCompiler().compile_source(render(workload, 8, 1))
+            self.assertIn(f"run_{workload}", lowered)
+            self.assertNotIn("cannot emit", lowered.lower())
 
     def test_cells_pipeline_match_and_objects_lower(self):
         cpp = NativeCompiler().compile_source(

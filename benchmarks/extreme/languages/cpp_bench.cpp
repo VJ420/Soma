@@ -226,6 +226,171 @@ double stencil(int grid) {
     return checksum;
 }
 
+double dijkstra(int n) {
+    constexpr std::int64_t inf = 1000000000;
+    constexpr std::int64_t mod = 1000000007;
+    std::vector<std::int64_t> dist(n, inf);
+    std::vector<int> used(n, 0);
+    dist[0] = 0;
+    for (int step = 0; step < n; ++step) {
+        int selected = 0;
+        std::int64_t best = inf;
+        int found = 0;
+        for (int index = 0; index < n; ++index) {
+            if (used[index] == 0 && dist[index] < best) {
+                best = dist[index];
+                selected = index;
+                found = 1;
+            }
+        }
+        if (found == 1) {
+            used[selected] = 1;
+            for (int vertex = 0; vertex < n; ++vertex) {
+                if (used[vertex] == 0 && selected != vertex) {
+                    const std::int64_t weight = (selected * 17 + vertex * 13) % 97 + 1;
+                    const std::int64_t candidate = dist[selected] + weight;
+                    if (candidate < dist[vertex]) dist[vertex] = candidate;
+                }
+            }
+        }
+    }
+    std::int64_t checksum = 0;
+    for (int index = 0; index < n; ++index) checksum = (checksum + dist[index] * (index + 1)) % mod;
+    return static_cast<double>(checksum);
+}
+
+double floyd(int n) {
+    constexpr std::int64_t mod = 1000000007;
+    std::vector<std::int64_t> dist(static_cast<size_t>(n) * n, 0);
+    for (int row = 0; row < n; ++row) {
+        for (int column = 0; column < n; ++column) {
+            dist[static_cast<size_t>(row * n + column)] = row == column ? 0 : (row * 17 + column * 13) % 97 + 1;
+        }
+    }
+    for (int via = 0; via < n; ++via) {
+        for (int row = 0; row < n; ++row) {
+            const std::int64_t via_cost = dist[static_cast<size_t>(row * n + via)];
+            for (int column = 0; column < n; ++column) {
+                const std::int64_t candidate = via_cost + dist[static_cast<size_t>(via * n + column)];
+                const size_t index = static_cast<size_t>(row * n + column);
+                if (candidate < dist[index]) dist[index] = candidate;
+            }
+        }
+    }
+    std::int64_t checksum = 0;
+    for (size_t index = 0; index < dist.size(); ++index) {
+        checksum = (checksum + dist[index] * static_cast<std::int64_t>(index + 1)) % mod;
+    }
+    return static_cast<double>(checksum);
+}
+
+double knapsack(int n) {
+    constexpr std::int64_t mod = 1000000007;
+    std::vector<std::int64_t> best(static_cast<size_t>(n) + 1, 0);
+    for (int item = 1; item <= n; ++item) {
+        const int weight = (item % 17) + 1;
+        const std::int64_t value = (item * 3) % 23 + 1;
+        for (int slot = n; slot >= weight; --slot) {
+            const std::int64_t candidate = best[static_cast<size_t>(slot - weight)] + value;
+            if (candidate > best[static_cast<size_t>(slot)]) best[static_cast<size_t>(slot)] = candidate;
+        }
+    }
+    std::int64_t checksum = 0;
+    for (size_t index = 0; index < best.size(); ++index) {
+        checksum = (checksum + best[index] * static_cast<std::int64_t>(index + 1)) % mod;
+    }
+    return static_cast<double>(checksum);
+}
+
+double editdist(int n) {
+    constexpr std::int64_t mod = 1000000007;
+    std::vector<std::int64_t> previous(static_cast<size_t>(n) + 1);
+    std::vector<std::int64_t> current(static_cast<size_t>(n) + 1, 0);
+    for (int index = 0; index <= n; ++index) previous[static_cast<size_t>(index)] = index;
+    for (int row = 1; row <= n; ++row) {
+        current[0] = row;
+        const int left_symbol = (row * 3) % 26;
+        for (int column = 1; column <= n; ++column) {
+            const std::int64_t cost = left_symbol == (column * 5) % 26 ? 0 : 1;
+            std::int64_t choice = previous[static_cast<size_t>(column)] + 1;
+            const std::int64_t insert = current[static_cast<size_t>(column - 1)] + 1;
+            const std::int64_t replace = previous[static_cast<size_t>(column - 1)] + cost;
+            if (insert < choice) choice = insert;
+            if (replace < choice) choice = replace;
+            current[static_cast<size_t>(column)] = choice;
+        }
+        std::swap(previous, current);
+    }
+    std::int64_t checksum = 0;
+    for (int index = 0; index <= n; ++index) {
+        checksum = (checksum + previous[static_cast<size_t>(index)] * (index + 1)) % mod;
+    }
+    return static_cast<double>(checksum);
+}
+
+double lis_checksum(int n) {
+    constexpr std::int64_t mod = 1000000007;
+    std::vector<std::int64_t> tails(n, 0);
+    int length = 0;
+    std::int64_t state = 1;
+    for (int sample = 0; sample < n; ++sample) {
+        state = (state * 48271) % 2147483647LL;
+        const std::int64_t value = state % 1000003;
+        int low = 0;
+        int high = length;
+        while (low < high) {
+            const int mid = (low + high) / 2;
+            if (tails[static_cast<size_t>(mid)] < value) low = mid + 1;
+            else high = mid;
+        }
+        if (low == length) {
+            tails[static_cast<size_t>(length)] = value;
+            length += 1;
+        } else {
+            tails[static_cast<size_t>(low)] = value;
+        }
+    }
+    std::int64_t checksum = 0;
+    for (int index = 0; index < length; ++index) {
+        checksum = (checksum + tails[static_cast<size_t>(index)] * (index + 1)) % mod;
+    }
+    return static_cast<double>(checksum);
+}
+
+double life(int n) {
+    const int cells = n * n;
+    std::vector<int> current(cells, 0);
+    std::vector<int> next(cells, 0);
+    for (int index = 0; index < n; ++index) {
+        current[index * n + index] = 1;
+        current[index * n + ((index * 3) % n)] = 1;
+    }
+    for (int step = 0; step < 12; ++step) {
+        for (int y = 0; y < n; ++y) {
+            for (int x = 0; x < n; ++x) {
+                int neighbors = 0;
+                if (y > 0 && x > 0 && current[(y - 1) * n + (x - 1)] == 1) neighbors += 1;
+                if (y > 0 && current[(y - 1) * n + x] == 1) neighbors += 1;
+                if (y > 0 && x + 1 < n && current[(y - 1) * n + (x + 1)] == 1) neighbors += 1;
+                if (x > 0 && current[y * n + (x - 1)] == 1) neighbors += 1;
+                if (x + 1 < n && current[y * n + (x + 1)] == 1) neighbors += 1;
+                if (y + 1 < n && x > 0 && current[(y + 1) * n + (x - 1)] == 1) neighbors += 1;
+                if (y + 1 < n && current[(y + 1) * n + x] == 1) neighbors += 1;
+                if (y + 1 < n && x + 1 < n && current[(y + 1) * n + (x + 1)] == 1) neighbors += 1;
+                const int alive = current[y * n + x];
+                int born = 0;
+                if (alive == 1 && (neighbors == 2 || neighbors == 3)) born = 1;
+                if (alive == 0 && neighbors == 3) born = 1;
+                next[y * n + x] = born;
+            }
+        }
+        std::swap(current, next);
+    }
+    std::int64_t checksum = 0;
+    for (int index = 0; index < cells; ++index) checksum += static_cast<std::int64_t>(current[index]) * (index + 1);
+    return static_cast<double>(checksum);
+}
+
 double histogram(int sample_count) {
     std::vector<std::int64_t> bins(1024);
     std::int64_t state = 1;
@@ -247,6 +412,8 @@ int main(int argc, char** argv) {
         {"nqueens", nqueens}, {"mandelbrot", mandelbrot}, {"matmul", matmul},
         {"lcs", lcs}, {"sieve", sieve}, {"nbody", nbody}, {"binarytrees", binarytrees},
         {"bfs", bfs}, {"sort", sort_checksum}, {"stencil", stencil}, {"histogram", histogram},
+        {"dijkstra", dijkstra}, {"floyd", floyd}, {"knapsack", knapsack}, {"editdist", editdist},
+        {"lis", lis_checksum}, {"life", life},
     };
     double (*function)(int) = nullptr;
     for (const auto& [name, candidate] : functions) {

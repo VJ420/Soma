@@ -1,5 +1,6 @@
-"""
-Comprehensive Multi-Domain Empirical Benchmark Suite for Fractal.
+"""Archived local probe. The published ranking is docs/MEASURED_PERFORMANCE.md.
+
+Comprehensive Multi-Domain Empirical Benchmark Suite.
 Measures 6 distinct computational dimensions against Python 3.12 and Node.js V8:
 1. Recursive Call-Stack & Combinatorics (Fibonacci n=28)
 2. High-Degree Mathematical Number Theory (Sieve of Eratosthenes Prime Density up to 100,000)
@@ -16,7 +17,7 @@ import json
 import sys
 import os
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from swarm_core import BlazingSwarmEngine
 
 def run_py_code(code: str) -> float:
@@ -289,7 +290,7 @@ print(f"{(t1 - t0) * 1000:.2f}")
     print(f"      Python: {t_py_swarm:8.2f} ms | Fractal: {t_fc_swarm:8.2f} ms -> {t_py_swarm/t_fc_swarm:.1f}x Faster")
 
     # Save benchmark json for comprehensive artifact report
-    with open("benchmarks/empirical_results.json", "w", encoding="utf-8") as f:
+    with open("benchmarks/archive/empirical_results.json", "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
     print("\n" + "=" * 80)

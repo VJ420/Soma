@@ -1,7 +1,12 @@
 """Local interpreter-versus-bytecode loop.
 
-This is not the cross-language ranking. That ranking is docs/MEASURED_PERFORMANCE.md.
+Archived. This is not the cross-language ranking. That ranking is docs/MEASURED_PERFORMANCE.md.
 """
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 import time
 from lexer import Lexer
 from parser import Parser

@@ -7,6 +7,7 @@ benchmarks/extreme/results/generated/
 benchmarks/extreme/deep-results/
 benchmarks/extreme/native-results/
 benchmarks/extreme/lowered-results/
+benchmarks/extreme/hard-results/
 __pycache__/
 *.pyc
 .system_generated/

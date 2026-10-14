@@ -1,4 +1,5 @@
-"""
+"""Archived local probe. The published ranking is docs/MEASURED_PERFORMANCE.md.
+
 Soma V2 Comprehensive Cross-Domain Extreme Benchmark Suite.
 Tests 8 ultra-hard computational workloads across distinct scientific and systems domains:
 
@@ -457,7 +458,7 @@ console.log((t1 - t0).toFixed(2));
     results["n_body"] = {"domain": "Astrophysical Physics ODE", "py": t_py_nb, "soma_jit": t_sm_nb}
     print(f"      Python: {t_py_nb:7.2f} ms | JavaScript: {t_sm_nb:7.2f} ms")
 
-    with open("benchmarks/cross_domain_extreme_results.json", "w", encoding="utf-8") as f:
+    with open("benchmarks/archive/cross_domain_extreme_results.json", "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
     print("=" * 92)

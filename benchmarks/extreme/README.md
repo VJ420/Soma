@@ -4,7 +4,7 @@ This suite compares Soma programs with equivalent Python, JavaScript, Go, Rust, 
 
 ## What is measured
 
-Eleven tasks: N-queens, Mandelbrot, matrix multiply, longest common subsequence, sieve, N-body, binary trees, breadth-first search, bottom-up mergesort, a 12-step stencil, and a histogram. Each task has three input sizes. Kernel time is measured inside the process. A zero-iteration run measures cold start. On Linux, GNU `time` records peak resident memory.
+Seventeen tasks: N-queens, Mandelbrot, matrix multiply, longest common subsequence, sieve, N-body, binary trees, breadth-first search, bottom-up mergesort, a 12-step stencil, a histogram, dense Dijkstra, Floyd-Warshall, zero-one knapsack, Levenshtein edit distance, longest increasing subsequence, and 12 steps of Conway's Life. Each task has three input sizes. Kernel time is measured inside the process. A zero-iteration run measures cold start. On Linux, GNU `time` records peak resident memory.
 
 Every implementation prints a checksum. A timing is discarded if it times out, crashes, or disagrees with the Python reference. Fast runtimes repeat the kernel so the clock resolution does not dominate.
 

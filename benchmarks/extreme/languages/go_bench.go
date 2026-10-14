@@ -261,6 +261,220 @@ func stencil(grid int) float64 {
 	return checksum
 }
 
+func dijkstra(n int) float64 {
+	const inf int64 = 1000000000
+	const mod int64 = 1000000007
+	dist := make([]int64, n)
+	used := make([]int, n)
+	for index := range dist {
+		dist[index] = inf
+	}
+	dist[0] = 0
+	for step := 0; step < n; step++ {
+		selected := 0
+		best := inf
+		found := 0
+		for index := 0; index < n; index++ {
+			if used[index] == 0 && dist[index] < best {
+				best = dist[index]
+				selected = index
+				found = 1
+			}
+		}
+		if found == 1 {
+			used[selected] = 1
+			for vertex := 0; vertex < n; vertex++ {
+				if used[vertex] == 0 && selected != vertex {
+					weight := int64((selected*17+vertex*13)%97 + 1)
+					candidate := dist[selected] + weight
+					if candidate < dist[vertex] {
+						dist[vertex] = candidate
+					}
+				}
+			}
+		}
+	}
+	checksum := int64(0)
+	for index, value := range dist {
+		checksum = (checksum + value*int64(index+1)) % mod
+	}
+	return float64(checksum)
+}
+
+func floyd(n int) float64 {
+	const mod int64 = 1000000007
+	dist := make([]int64, n*n)
+	for row := 0; row < n; row++ {
+		for column := 0; column < n; column++ {
+			if row == column {
+				dist[row*n+column] = 0
+			} else {
+				dist[row*n+column] = int64((row*17+column*13)%97 + 1)
+			}
+		}
+	}
+	for via := 0; via < n; via++ {
+		for row := 0; row < n; row++ {
+			viaCost := dist[row*n+via]
+			for column := 0; column < n; column++ {
+				candidate := viaCost + dist[via*n+column]
+				index := row*n + column
+				if candidate < dist[index] {
+					dist[index] = candidate
+				}
+			}
+		}
+	}
+	checksum := int64(0)
+	for index, value := range dist {
+		checksum = (checksum + value*int64(index+1)) % mod
+	}
+	return float64(checksum)
+}
+
+func knapsack(n int) float64 {
+	const mod int64 = 1000000007
+	best := make([]int64, n+1)
+	for item := 1; item <= n; item++ {
+		weight := (item % 17) + 1
+		value := int64((item*3)%23 + 1)
+		for slot := n; slot >= weight; slot-- {
+			candidate := best[slot-weight] + value
+			if candidate > best[slot] {
+				best[slot] = candidate
+			}
+		}
+	}
+	checksum := int64(0)
+	for index, value := range best {
+		checksum = (checksum + value*int64(index+1)) % mod
+	}
+	return float64(checksum)
+}
+
+func editdist(n int) float64 {
+	const mod int64 = 1000000007
+	previous := make([]int64, n+1)
+	current := make([]int64, n+1)
+	for index := 0; index <= n; index++ {
+		previous[index] = int64(index)
+	}
+	for row := 1; row <= n; row++ {
+		current[0] = int64(row)
+		leftSymbol := (row * 3) % 26
+		for column := 1; column <= n; column++ {
+			cost := int64(1)
+			if leftSymbol == (column*5)%26 {
+				cost = 0
+			}
+			choice := previous[column] + 1
+			insert := current[column-1] + 1
+			replace := previous[column-1] + cost
+			if insert < choice {
+				choice = insert
+			}
+			if replace < choice {
+				choice = replace
+			}
+			current[column] = choice
+		}
+		previous, current = current, previous
+	}
+	checksum := int64(0)
+	for index, value := range previous {
+		checksum = (checksum + value*int64(index+1)) % mod
+	}
+	return float64(checksum)
+}
+
+func lis(n int) float64 {
+	const mod int64 = 1000000007
+	tails := make([]int64, n)
+	length := 0
+	state := int64(1)
+	for sample := 0; sample < n; sample++ {
+		state = (state * 48271) % 2147483647
+		value := state % 1000003
+		low := 0
+		high := length
+		for low < high {
+			mid := (low + high) / 2
+			if tails[mid] < value {
+				low = mid + 1
+			} else {
+				high = mid
+			}
+		}
+		if low == length {
+			tails[length] = value
+			length++
+		} else {
+			tails[low] = value
+		}
+	}
+	checksum := int64(0)
+	for index := 0; index < length; index++ {
+		checksum = (checksum + tails[index]*int64(index+1)) % mod
+	}
+	return float64(checksum)
+}
+
+func life(n int) float64 {
+	cells := n * n
+	current := make([]int, cells)
+	next := make([]int, cells)
+	for index := 0; index < n; index++ {
+		current[index*n+index] = 1
+		current[index*n+((index*3)%n)] = 1
+	}
+	for step := 0; step < 12; step++ {
+		for y := 0; y < n; y++ {
+			for x := 0; x < n; x++ {
+				neighbors := 0
+				if y > 0 && x > 0 && current[(y-1)*n+(x-1)] == 1 {
+					neighbors++
+				}
+				if y > 0 && current[(y-1)*n+x] == 1 {
+					neighbors++
+				}
+				if y > 0 && x+1 < n && current[(y-1)*n+(x+1)] == 1 {
+					neighbors++
+				}
+				if x > 0 && current[y*n+(x-1)] == 1 {
+					neighbors++
+				}
+				if x+1 < n && current[y*n+(x+1)] == 1 {
+					neighbors++
+				}
+				if y+1 < n && x > 0 && current[(y+1)*n+(x-1)] == 1 {
+					neighbors++
+				}
+				if y+1 < n && current[(y+1)*n+x] == 1 {
+					neighbors++
+				}
+				if y+1 < n && x+1 < n && current[(y+1)*n+(x+1)] == 1 {
+					neighbors++
+				}
+				alive := current[y*n+x]
+				born := 0
+				if alive == 1 && (neighbors == 2 || neighbors == 3) {
+					born = 1
+				}
+				if alive == 0 && neighbors == 3 {
+					born = 1
+				}
+				next[y*n+x] = born
+			}
+		}
+		current, next = next, current
+	}
+	checksum := 0
+	for index, value := range current {
+		checksum += value * (index + 1)
+	}
+	return float64(checksum)
+}
+
 func histogram(sampleCount int) float64 {
 	bins := make([]int64, 1024)
 	state := int64(1)
@@ -283,6 +497,7 @@ func main() {
 		"nqueens": nqueens, "mandelbrot": mandelbrot, "matmul": matmul,
 		"lcs": lcs, "sieve": sieve, "nbody": nbody, "binarytrees": binarytrees,
 		"bfs": bfs, "sort": sortChecksum, "stencil": stencil, "histogram": histogram,
+		"dijkstra": dijkstra, "floyd": floyd, "knapsack": knapsack, "editdist": editdist, "lis": lis, "life": life,
 	}
 	total := 0.0
 	started := time.Now()
